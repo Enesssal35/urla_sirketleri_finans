@@ -24,33 +24,8 @@ Borsa İstanbul (BIST) bünyesindeki 14 seçkin şirketin (`EGEEN`, `CLEBI`, `FR
 
 ---
 
-## 🚀 Hızlı Başlangıç & Kurulum
+## 🔒 Telif Hakkı & Lisans
 
-### 1. Web Arayüzünü Çalıştırma
+© 2026 Tüm Hakları Saklıdır (All Rights Reserved).
 
-Projeyi bilgisayarınızda açmak için terminalde aşağıdaki komutu çalıştırabilirsiniz:
-
-```bash
-python -m http.server 8080
-```
-
-Ardından tarayıcınızdan **`http://localhost:8080`** adresine gidin.
-
-### 2. Python Otomasyon ve Telegram Botunu Başlatma
-
-```bash
-# Bağımlılıkları yükleyin
-pip install -r python/requirements.txt
-
-# Canlı fiyat tarayıcıyı çalıştırın
-python python/kap_scraper.py
-
-# Telegram test bildirimini gönderin
-python python/telegram_notifier.py --test
-```
-
----
-
-## 📝 Lisans
-
-Bu proje MIT Lisansı ile lisanslanmıştır.
+Bu projenin kodları, tasarımı ve fikri mülkiyeti eser sahibine aittir. Yazılı izin alınmaksızın kopyalanması, çoğaltılması, başka projelere aktarılması veya ticari amaçla kullanılması yasaktır.

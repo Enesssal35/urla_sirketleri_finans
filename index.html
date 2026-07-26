@@ -18,7 +18,7 @@
     <!-- Custom Live HTML5 BIST Ticker Tape Banner -->
     <div class="ticker-tape-container">
         <div class="ticker-tape-track" id="tickerTapeTrack">
-            <!-- Rendered dynamically by js/app.js -->
+            <!-- Rendered dynamically by app.js -->
         </div>
     </div>
 
@@ -60,10 +60,10 @@
 
         <!-- Metrics Overview Section -->
         <section class="summary-grid" id="summaryGrid">
-            <!-- Rendered dynamically by js/app.js -->
+            <!-- Rendered dynamically by app.js -->
         </section>
 
-        <!-- Tab Navigation (Explicit switchTab onclick handlers) -->
+        <!-- Tab Navigation -->
         <nav class="tab-navigation">
             <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard', this)">
                 <i data-lucide="table"></i> ROIC & ROE Ana Tablo (14 Hisse)
@@ -136,7 +136,7 @@
                         </tr>
                     </thead>
                     <tbody id="financialTableBody">
-                        <!-- Rendered by js/app.js -->
+                        <!-- Rendered by app.js -->
                     </tbody>
                 </table>
             </div>
@@ -192,7 +192,7 @@
                         </tr>
                     </thead>
                     <tbody id="portfolioTableBody">
-                        <!-- Rendered by js/app.js -->
+                        <!-- Rendered by app.js -->
                     </tbody>
                 </table>
             </div>
@@ -283,7 +283,7 @@
                         Aktif Özel Alarmlarınız:
                     </h4>
                     <div id="customRulesList" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <!-- Rendered by js/app.js -->
+                        <!-- Rendered by app.js -->
                     </div>
                 </div>
             </div>
@@ -495,7 +495,8 @@
         </div>
     </div>
 
-    <script src="js/data.js"></script>
-    <script src="js/app.js"></script>
+    <!-- Flexible Script Loading: Supports both root and subfolder structures! -->
+    <script src="data.js" onerror="this.onerror=null;this.src='js/data.js';"></script>
+    <script src="app.js" onerror="this.onerror=null;this.src='js/app.js';"></script>
 </body>
 </html>
