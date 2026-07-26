@@ -27,8 +27,8 @@ let customAlertRules = JSON.parse(localStorage.getItem("bist_custom_rules")) || 
 ];
 
 let telegramConfig = JSON.parse(localStorage.getItem("bist_telegram_config")) || {
-    botToken: "8752508671:AAHh0MFDP5fHiSxNNIvZNjwTdyX6O1i5LHM",
-    chatId: "1243180648"
+    botToken: "",
+    chatId: ""
 };
 
 document.addEventListener("DOMContentLoaded", () => {
