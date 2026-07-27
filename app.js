@@ -1,5 +1,4 @@
-// BIST Financial & KAP Terminal Application Logic
-// Pre-configured Telegram Bot Settings for User
+// BIST Financial & KAP Terminal Application Logic with WACC & Traffic Light Valuation Rules
 
 let activeTab = "dashboard";
 let currentSortKey = "order"; // Preserves user's exact 1 to 14 stock ordering
@@ -56,6 +55,92 @@ function initLucideIcons() {
     }
 }
 
+// ----------------------------------------------------
+// Traffic Light Badge Helper Functions (🟢 Yeşil, 🟡 Sarı, 🔴 Kırmızı)
+// ----------------------------------------------------
+function getRoicBadge(roic) {
+    if (roic >= 30) return `<span class="badge-highlight badge-emerald">🟢 %${roic} (Yüksek)</span>`;
+    if (roic >= 20) return `<span class="badge-highlight badge-amber">🟡 %${roic} (Makul)</span>`;
+    return `<span class="badge-highlight badge-rose">🔴 %${roic} (Düşük)</span>`;
+}
+
+function getWaccBadge(wacc) {
+    return `<span class="badge-highlight badge-cyan">🔵 %${wacc}</span>`;
+}
+
+function getEvaBadge(roic, wacc) {
+    const eva = (roic - wacc).toFixed(1);
+    if (eva > 0) return `<span class="badge-highlight badge-emerald">🟢 +%${eva} (EVA+)</span>`;
+    return `<span class="badge-highlight badge-rose">🔴 %${eva} (EVA-)</span>`;
+}
+
+function getRoeBadge(roe) {
+    if (roe >= 40) return `<span class="badge-highlight badge-emerald">🟢 %${roe} (Yüksek)</span>`;
+    if (roe >= 25) return `<span class="badge-highlight badge-amber">🟡 %${roe} (Makul)</span>`;
+    return `<span class="badge-highlight badge-rose">🔴 %${roe} (Düşük)</span>`;
+}
+
+function getPeBadge(pe) {
+    if (pe <= 8.0) return `<span class="badge-highlight badge-emerald">🟢 ${pe}x (Cazip)</span>`;
+    if (pe <= 14.0) return `<span class="badge-highlight badge-amber">🟡 ${pe}x (Makul)</span>`;
+    return `<span class="badge-highlight badge-rose">🔴 ${pe}x (Yüksek)</span>`;
+}
+
+function getPbBadge(pb) {
+    if (pb <= 2.5) return `<span class="badge-highlight badge-emerald">🟢 ${pb}x (Cazip)</span>`;
+    if (pb <= 4.5) return `<span class="badge-highlight badge-amber">🟡 ${pb}x (Makul)</span>`;
+    return `<span class="badge-highlight badge-rose">🔴 ${pb}x (Yüksek)</span>`;
+}
+
+function getDebtBadge(netDebt) {
+    if (netDebt <= 0) return `<span class="badge-highlight badge-emerald">🟢 ${netDebt}x (Borçsuz)</span>`;
+    if (netDebt <= 1.5) return `<span class="badge-highlight badge-amber">🟡 ${netDebt}x (Makul)</span>`;
+    return `<span class="badge-highlight badge-rose">🔴 ${netDebt}x (Borç Riski)</span>`;
+}
+
+// Explicit Valuation Decision Rule Engine
+function getValuationDecisionRule(stock) {
+    const eva = stock.metrics.roic - stock.metrics.wacc;
+    const earningsYield = (1 / stock.metrics.peRatio) * 100;
+    const compositeScore = ((stock.metrics.roic * 0.6) + (earningsYield * 0.4)).toFixed(1);
+
+    if (eva > 10 && stock.metrics.peRatio <= 13.0) {
+        return {
+            badge: `<span class="badge-highlight badge-emerald">🟢 MÜKEMMEL DEĞERLEME</span>`,
+            explanation: `<strong>EVA Kuralı:</strong> ROIC (%${stock.metrics.roic}) > WACC (%${stock.metrics.wacc}) farkı +%${eva.toFixed(1)} ve F/K (${stock.metrics.peRatio}x) cazip. Katma değer yaratıyor.`
+        };
+    } else if (eva > 0 && stock.metrics.peRatio <= 15.0) {
+        return {
+            badge: `<span class="badge-highlight badge-cyan">🔵 MAKUL KATMA DEĞER</span>`,
+            explanation: `<strong>Greenblatt Kuralı:</strong> ROIC sermaye maliyetini karşılıyor (EVA +%${eva.toFixed(1)}), Skor: ${compositeScore}.`
+        };
+    } else if (eva <= 0) {
+        return {
+            badge: `<span class="badge-highlight badge-rose">🔴 SERMAYE MALİYETİ ALTI</span>`,
+            explanation: `<strong>EVA Risk Kuralı:</strong> ROIC (%${stock.metrics.roic}) < WACC (%${stock.metrics.wacc}) sermaye maliyetini karşılayamıyor (-%${Math.abs(eva).toFixed(1)}).`
+        };
+    } else {
+        return {
+            badge: `<span class="badge-highlight badge-amber">🟡 NÖTR / DENGELİ</span>`,
+            explanation: `<strong>Denge Kuralı:</strong> ROIC ve F/K oranları sektör ortalamaları ile uyumlu.`
+        };
+    }
+}
+
+// Modal Handlers for Help
+function openValuationRulesHelpModal() {
+    const modal = document.getElementById("valuationRulesHelpModal");
+    if (modal) modal.classList.add("active");
+}
+
+function closeValuationRulesHelpModal() {
+    const modal = document.getElementById("valuationRulesHelpModal");
+    if (modal) modal.classList.remove("active");
+}
+
+// ----------------------------------------------------
+// 1. Tab Switcher System
+// ----------------------------------------------------
 function switchTab(tabId, btnElement = null) {
     activeTab = tabId;
 
@@ -91,6 +176,9 @@ function switchTab(tabId, btnElement = null) {
     initLucideIcons();
 }
 
+// ----------------------------------------------------
+// 2. Custom HTML5 Live Ticker Tape Generator
+// ----------------------------------------------------
 function renderCustomTickerTape() {
     const track = document.getElementById("tickerTapeTrack");
     if (!track) return;
@@ -111,6 +199,9 @@ function renderCustomTickerTape() {
     }).join("");
 }
 
+// ----------------------------------------------------
+// 3. Portfolio Management & Weighted ROIC / WACC Calculator
+// ----------------------------------------------------
 function renderPortfolioTable() {
     const tbody = document.getElementById("portfolioTableBody");
     if (!tbody) return;
@@ -118,7 +209,7 @@ function renderPortfolioTable() {
     let totalCost = 0;
     let totalCurrentValue = 0;
     let weightedRoicSum = 0;
-    let weightedRoeSum = 0;
+    let weightedWaccSum = 0;
 
     tbody.innerHTML = BIST_STOCKS.map(stock => {
         const holding = userPortfolio[stock.code] || { qty: 0, cost: 0 };
@@ -137,8 +228,10 @@ function renderPortfolioTable() {
 
         if (positionValue > 0) {
             weightedRoicSum += (stock.metrics.roic * positionValue);
-            weightedRoeSum += (stock.metrics.roe * positionValue);
+            weightedWaccSum += (stock.metrics.wacc * positionValue);
         }
+
+        const eva = stock.metrics.roic - stock.metrics.wacc;
 
         return `
             <tr>
@@ -162,7 +255,9 @@ function renderPortfolioTable() {
                     <strong>${pnlSign}${pnl.toLocaleString("tr-TR", {minimumFractionDigits: 2})} ₺</strong>
                     <div style="font-size: 0.78rem;">(${pnlSign}%${pnlPercent})</div>
                 </td>
-                <td><span class="badge-highlight badge-emerald">%${stock.metrics.roic}</span></td>
+                <td>${getRoicBadge(stock.metrics.roic)}</td>
+                <td>${getWaccBadge(stock.metrics.wacc)}</td>
+                <td>${getEvaBadge(stock.metrics.roic, stock.metrics.wacc)}</td>
             </tr>
         `;
     }).join("");
@@ -170,16 +265,22 @@ function renderPortfolioTable() {
     const totalPnl = totalCurrentValue - totalCost;
     const totalPnlPercent = totalCost > 0 ? ((totalPnl / totalCost) * 100).toFixed(2) : 0;
     const weightedRoic = totalCurrentValue > 0 ? (weightedRoicSum / totalCurrentValue).toFixed(1) : 0;
+    const weightedWacc = totalCurrentValue > 0 ? (weightedWaccSum / totalCurrentValue).toFixed(1) : 0;
+    const netEva = (weightedRoic - weightedWacc).toFixed(1);
 
     const valEl = document.getElementById("portTotalValue");
     const costEl = document.getElementById("portTotalCost");
     const pnlEl = document.getElementById("portTotalPnl");
     const roicEl = document.getElementById("portWeightedRoic");
+    const waccEl = document.getElementById("portWeightedWacc");
+    const evaEl = document.getElementById("portNetEva");
 
     if (valEl) valEl.innerText = `${totalCurrentValue.toLocaleString("tr-TR", {minimumFractionDigits: 2})} ₺`;
     if (costEl) costEl.innerText = `${totalCost.toLocaleString("tr-TR", {minimumFractionDigits: 2})} ₺`;
     if (pnlEl) pnlEl.innerHTML = `<span class="${totalPnl >= 0 ? 'trend-up' : 'trend-down'}">${totalPnl >= 0 ? '+' : ''}${totalPnl.toLocaleString("tr-TR", {minimumFractionDigits: 2})} ₺ (%${totalPnlPercent})</span>`;
     if (roicEl) roicEl.innerText = `%${weightedRoic}`;
+    if (waccEl) waccEl.innerText = `%${weightedWacc}`;
+    if (evaEl) evaEl.innerHTML = `<span class="${netEva >= 0 ? 'trend-up' : 'trend-down'}">${netEva >= 0 ? '+' : ''}%${netEva} EVA</span>`;
 
     initLucideIcons();
 }
@@ -191,6 +292,9 @@ function updatePortfolioItem(code, field, value) {
     renderPortfolioTable();
 }
 
+// ----------------------------------------------------
+// 4. Custom Alert Rules Builder Modülü
+// ----------------------------------------------------
 function renderCustomRulesList() {
     const listContainer = document.getElementById("customRulesList");
     if (!listContainer) return;
@@ -201,7 +305,7 @@ function renderCustomRulesList() {
     }
 
     listContainer.innerHTML = customAlertRules.map(rule => {
-        const metricLabel = rule.metric === "roic" ? "ROIC" : (rule.metric === "roe" ? "ROE" : (rule.metric === "peRatio" ? "F/K" : "Net Borç/FAVÖK"));
+        const metricLabel = rule.metric === "roic" ? "ROIC" : (rule.metric === "wacc" ? "WACC" : (rule.metric === "roe" ? "ROE" : (rule.metric === "peRatio" ? "F/K" : "Net Borç/FAVÖK")));
         return `
             <div class="rule-pill">
                 <span>[${rule.stockCode}] ${metricLabel} ${rule.operator} ${rule.value}</span>
@@ -272,6 +376,9 @@ function evaluateCustomRules(stock) {
     return triggeredBadges.join(" ");
 }
 
+// ----------------------------------------------------
+// 5. Telegram Notification Bot Config
+// ----------------------------------------------------
 function loadTelegramConfigUI() {
     const tokenInput = document.getElementById("tgTokenInput");
     const chatIdInput = document.getElementById("tgChatIdInput");
@@ -299,7 +406,7 @@ function sendTestTelegramMessage() {
         return;
     }
 
-    const message = encodeURIComponent(`🚨 BIST ROIC/ROE Terminal Test Bildirimi!\n\n14 BIST hissenizin takibi aktif edilmiştir.\nEGEEN ROIC: %42.1\nFROTO ROE: %52.4\n\nBaşarıyla bağlandınız! 🎉`);
+    const message = encodeURIComponent(`🚨 BIST ROIC/ROE/WACC Terminal Test Bildirimi!\n\n14 BIST hissenizin takibi aktif edilmiştir.\nEGEEN ROIC: %42.1 | WACC: %22.5 (EVA +%19.6)\nFROTO ROE: %52.4\n\nBaşarıyla bağlandınız! 🎉`);
     const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${message}`;
 
     fetch(url)
@@ -318,13 +425,16 @@ function sendTestTelegramMessage() {
         .catch(err => alert("Bağlantı hatası: " + err.message));
 }
 
+// ----------------------------------------------------
+// 6. Technical & Comparison Charts
+// ----------------------------------------------------
 function renderTechnicalPaneChart(code) {
     const stock = BIST_STOCKS.find(s => s.code === code) || BIST_STOCKS[2];
     const ctx = document.getElementById("technicalPaneCanvas");
     const titleEl = document.getElementById("technicalChartTitle");
     const tvLinkEl = document.getElementById("tvDirectLink");
 
-    if (titleEl) titleEl.innerText = `${stock.code} - ${stock.name} Canlı Performans & Verimlilik Grafiği`;
+    if (titleEl) titleEl.innerText = `${stock.code} - ${stock.name} Canlı Performans, ROIC & WACC Grafiği`;
     if (tvLinkEl) tvLinkEl.href = `https://tr.tradingview.com/symbols/BIST-${stock.code}/`;
 
     if (!ctx) return;
@@ -332,6 +442,7 @@ function renderTechnicalPaneChart(code) {
 
     const quarters = stock.historical8Q.map(h => h.quarter);
     const roicData = stock.historical8Q.map(h => h.roic);
+    const waccData = stock.historical8Q.map(h => h.wacc);
     const roeData = stock.historical8Q.map(h => h.roe);
     const revenueData = stock.historical8Q.map(h => h.revenue);
 
@@ -343,9 +454,10 @@ function renderTechnicalPaneChart(code) {
         data: {
             labels: quarters,
             datasets: [
-                { type: 'line', label: 'ROIC (%)', data: roicData, borderColor: '#0284c7', borderWidth: 3, yAxisID: 'y' },
+                { type: 'line', label: 'ROIC (%)', data: roicData, borderColor: '#10b981', borderWidth: 3, yAxisID: 'y' },
+                { type: 'line', label: 'WACC (%)', data: waccData, borderColor: '#0284c7', borderWidth: 2, borderDash: [5, 5], yAxisID: 'y' },
                 { type: 'line', label: 'ROE (%)', data: roeData, borderColor: '#4f46e5', borderWidth: 3, yAxisID: 'y' },
-                { type: 'bar', label: 'Çeyreklik Satış Geliri (Milyon TL)', data: revenueData, backgroundColor: 'rgba(16, 185, 129, 0.3)', borderColor: '#10b981', borderWidth: 1, yAxisID: 'y1' }
+                { type: 'bar', label: 'Çeyreklik Satış Geliri (Milyon TL)', data: revenueData, backgroundColor: 'rgba(245, 158, 11, 0.25)', borderColor: '#f59e0b', borderWidth: 1, yAxisID: 'y1' }
             ]
         },
         options: {
@@ -354,7 +466,7 @@ function renderTechnicalPaneChart(code) {
             scales: {
                 x: { ticks: { color: textThemeColor }, grid: { color: gridThemeColor } },
                 y: { type: 'linear', position: 'left', ticks: { color: textThemeColor } },
-                y1: { type: 'linear', position: 'right', ticks: { color: '#10b981' } }
+                y1: { type: 'linear', position: 'right', ticks: { color: '#f59e0b' } }
             }
         }
     });
@@ -364,6 +476,9 @@ function changeTvPaneSymbol(code) {
     renderTechnicalPaneChart(code);
 }
 
+// ----------------------------------------------------
+// 7. Core Table & Overview Renderers
+// ----------------------------------------------------
 function applyTheme(theme) {
     currentTheme = theme;
     document.documentElement.setAttribute("data-theme", theme);
@@ -388,6 +503,8 @@ function toggleTheme() {
 function renderOverviewMetrics() {
     const avgRoe = (BIST_STOCKS.reduce((acc, stock) => acc + stock.metrics.roe, 0) / BIST_STOCKS.length).toFixed(1);
     const avgRoic = (BIST_STOCKS.reduce((acc, stock) => acc + stock.metrics.roic, 0) / BIST_STOCKS.length).toFixed(1);
+    const avgWacc = (BIST_STOCKS.reduce((acc, stock) => acc + stock.metrics.wacc, 0) / BIST_STOCKS.length).toFixed(1);
+    const avgEva = (avgRoic - avgWacc).toFixed(1);
     const topRoicStock = [...BIST_STOCKS].sort((a, b) => b.metrics.roic - a.metrics.roic)[0];
 
     const metricsContainer = document.getElementById("summaryGrid");
@@ -397,7 +514,17 @@ function renderOverviewMetrics() {
         <div class="metric-card">
             <div class="metric-header"><span>PORTFÖY ORTALAMA ROIC</span><div class="metric-icon icon-cyan"><i data-lucide="zap"></i></div></div>
             <div class="metric-value">%${avgRoic}</div>
-            <div class="metric-subtext">14 Şirket Sermaye Verimlilik Ortalama</div>
+            <div class="metric-subtext">14 Şirket Sermaye Verimliliği</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-header"><span>ORTALAMA WACC MALİYETİ</span><div class="metric-icon icon-purple"><i data-lucide="percent"></i></div></div>
+            <div class="metric-value">%${avgWacc}</div>
+            <div class="metric-subtext">Ağırlıklı Sermaye Maliyeti</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-header"><span>NET EVA KATMA DEĞER SPREAD</span><div class="metric-icon icon-emerald"><i data-lucide="sparkles"></i></div></div>
+            <div class="metric-value trend-up">+%${avgEva}</div>
+            <div class="metric-subtext">ROIC - WACC Net Verim Farkı</div>
         </div>
         <div class="metric-card">
             <div class="metric-header"><span>PORTFÖY ORTALAMA ROE</span><div class="metric-icon icon-blue"><i data-lucide="trending-up"></i></div></div>
@@ -405,14 +532,9 @@ function renderOverviewMetrics() {
             <div class="metric-subtext">Özkaynak Karlılık Oranı</div>
         </div>
         <div class="metric-card">
-            <div class="metric-header"><span>ROIC VERİMLİLİK LİDERİ</span><div class="metric-icon icon-emerald"><i data-lucide="award"></i></div></div>
+            <div class="metric-header"><span>VERİMLİLİK LİDERİ</span><div class="metric-icon icon-emerald"><i data-lucide="award"></i></div></div>
             <div class="metric-value">${topRoicStock.code} (%${topRoicStock.metrics.roic})</div>
             <div class="metric-subtext">${topRoicStock.name}</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-header"><span>PORTFÖY HİSSE SAYISI</span><div class="metric-icon icon-amber"><i data-lucide="layers"></i></div></div>
-            <div class="metric-value">14 BIST Şirketi</div>
-            <div class="metric-subtext">Kullanıcıya Özel Sıralı Liste</div>
         </div>
     `;
     initLucideIcons();
@@ -435,13 +557,11 @@ function renderFinancialTable() {
     });
 
     tbody.innerHTML = filtered.map(stock => {
-        const roicBadgeClass = stock.metrics.roic >= 35 ? 'badge-emerald' : (stock.metrics.roic >= 25 ? 'badge-cyan' : 'badge-amber');
-        const roeBadgeClass = stock.metrics.roe >= 40 ? 'badge-emerald' : 'badge-amber';
-        const netDebtClass = stock.metrics.netDebtToEbitda <= 0 ? 'badge-emerald' : (stock.metrics.netDebtToEbitda > 1.5 ? 'badge-rose' : 'badge-amber');
         const changeClass = stock.change >= 0 ? "trend-up" : "trend-down";
         const changeSign = stock.change >= 0 ? "+" : "";
 
         const customBadgesHtml = evaluateCustomRules(stock);
+        const valuationRule = getValuationDecisionRule(stock);
 
         return `
             <tr>
@@ -460,8 +580,10 @@ function renderFinancialTable() {
                     <strong>${stock.price.toLocaleString("tr-TR", {minimumFractionDigits: 2})} ₺</strong>
                     <div class="${changeClass}" style="font-size: 0.78rem;">${changeSign}%${stock.change}</div>
                 </td>
-                <td><span class="badge-highlight ${roicBadgeClass}">%${stock.metrics.roic}</span></td>
-                <td><span class="badge-highlight ${roeBadgeClass}">%${stock.metrics.roe}</span></td>
+                <td>${getRoicBadge(stock.metrics.roic)}</td>
+                <td>${getWaccBadge(stock.metrics.wacc)}</td>
+                <td>${getEvaBadge(stock.metrics.roic, stock.metrics.wacc)}</td>
+                <td>${getRoeBadge(stock.metrics.roe)}</td>
                 <td>
                     <div style="font-size: 0.82rem;">
                         <div>Marj: <strong>%${stock.metrics.dupont.netMargin}</strong></div>
@@ -469,12 +591,15 @@ function renderFinancialTable() {
                         <div>Kaldıraç: <strong>${stock.metrics.dupont.leverage}x</strong></div>
                     </div>
                 </td>
-                <td>${stock.metrics.peRatio}x</td>
-                <td>${stock.metrics.pbRatio}x</td>
-                <td><span class="badge-highlight ${netDebtClass}">${stock.metrics.netDebtToEbitda}x</span></td>
+                <td>${getPeBadge(stock.metrics.peRatio)}</td>
+                <td>${getPbBadge(stock.metrics.pbRatio)}</td>
+                <td>${getDebtBadge(stock.metrics.netDebtToEbitda)}</td>
                 <td>
-                    ${stock.metrics.roic >= 35 ? '<span class="badge-highlight badge-emerald">Yüksek Verim</span>' : '<span class="badge-highlight badge-cyan">Sağlıklı</span>'}
-                    ${customBadgesHtml}
+                    <div>${valuationRule.badge}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; max-width: 220px;">
+                        ${valuationRule.explanation}
+                    </div>
+                    ${customBadgesHtml ? `<div style="margin-top: 4px;">${customBadgesHtml}</div>` : ''}
                 </td>
                 <td>
                     <button class="btn-primary" style="padding: 5px 10px; font-size: 0.8rem;" onclick="openCompanyModal('${stock.code}')">
@@ -489,6 +614,9 @@ function renderFinancialTable() {
 }
 
 function getNestedValue(obj, path) {
+    if (path === "eva") {
+        return obj.metrics.roic - obj.metrics.wacc;
+    }
     if (path.includes(".")) {
         const parts = path.split(".");
         return parts.reduce((acc, part) => acc && acc[part], obj);
@@ -504,15 +632,20 @@ function renderHistoricalMatrix() {
 
     tableEl.innerHTML = BIST_STOCKS.map(stock => {
         const qData = stock.historical8Q;
-        const qFirst = qData[0][matrixMetric];
-        const qLast = qData[qData.length - 1][matrixMetric];
+        const qFirst = qData[0][matrixMetric] || qData[0]["roic"];
+        const qLast = qData[qData.length - 1][matrixMetric] || qData[qData.length - 1]["roic"];
         const delta = (qLast - qFirst).toFixed(1);
         const deltaClass = delta >= 0 ? "trend-up" : "trend-down";
 
         const qCells = quarters.map(q => {
             const item = qData.find(d => d.quarter === q);
-            const val = item ? item[matrixMetric] : 0;
-            let bgClass = val >= 38 ? "heatmap-emerald-dark" : (val >= 30 ? "heatmap-emerald" : (val >= 20 ? "heatmap-cyan" : "heatmap-amber"));
+            const val = item ? (item[matrixMetric] || item["roic"]) : 0;
+            let bgClass = "heatmap-cyan";
+            if (matrixMetric === "roic" || matrixMetric === "roe") {
+                bgClass = val >= 38 ? "heatmap-emerald-dark" : (val >= 30 ? "heatmap-emerald" : (val >= 20 ? "heatmap-cyan" : "heatmap-amber"));
+            } else {
+                bgClass = "heatmap-cyan";
+            }
             return `<td class="heatmap-cell ${bgClass}">%${val}</td>`;
         }).join("");
 
@@ -533,8 +666,14 @@ function renderHistoricalMatrix() {
 
 function setMatrixMetric(metric) {
     matrixMetric = metric;
-    document.getElementById("btnMatrixRoic").classList.toggle("active", metric === "roic");
-    document.getElementById("btnMatrixRoe").classList.toggle("active", metric === "roe");
+    const btnRoic = document.getElementById("btnMatrixRoic");
+    const btnRoe = document.getElementById("btnMatrixRoe");
+    const btnWacc = document.getElementById("btnMatrixWacc");
+
+    if (btnRoic) btnRoic.classList.toggle("active", metric === "roic");
+    if (btnRoe) btnRoe.classList.toggle("active", metric === "roe");
+    if (btnWacc) btnWacc.classList.toggle("active", metric === "wacc");
+
     renderHistoricalMatrix();
 }
 
@@ -571,12 +710,13 @@ function renderComparisonChart() {
 
 function exportToCSV() {
     let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Sira No,Hisse Kodu,Sirket Adi,Sektor,Dogrulanmis BIST Fiyati (TL),ROIC (%),ROE (%),Net Marj (%),Varlik Devir Hizi,Kaldırac,F/K,PD/DD,Net Borc/FAVOK\n";
+    csvContent += "Sira No,Hisse Kodu,Sirket Adi,Sektor,Dogrulanmis BIST Fiyati (TL),ROIC (%),WACC (%),EVA Spread (%),ROE (%),Net Marj (%),Varlik Devir Hizi,Kaldırac,F/K,PD/DD,Net Borc/FAVOK\n";
 
     BIST_STOCKS.forEach(s => {
+        const eva = (s.metrics.roic - s.metrics.wacc).toFixed(1);
         const row = [
             s.order, s.code, `"${s.name}"`, `"${s.sector}"`, s.price,
-            s.metrics.roic, s.metrics.roe, s.metrics.dupont.netMargin,
+            s.metrics.roic, s.metrics.wacc, eva, s.metrics.roe, s.metrics.dupont.netMargin,
             s.metrics.dupont.assetTurnover, s.metrics.dupont.leverage,
             s.metrics.peRatio, s.metrics.pbRatio, s.metrics.netDebtToEbitda
         ].join(",");
@@ -586,7 +726,7 @@ function exportToCSV() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `BIST_14_Hisse_ROIC_ROE_Rapor_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute("download", `BIST_14_Hisse_ROIC_ROE_WACC_Rapor_${new Date().toISOString().slice(0,10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -643,6 +783,7 @@ function renderMagicFormulaTable() {
     container.innerHTML = ranked.map((stock, index) => {
         const earningsYield = ((1 / stock.metrics.peRatio) * 100).toFixed(2);
         const compositeScore = ((stock.metrics.roic * 0.6) + (earningsYield * 0.4)).toFixed(1);
+        const valuationRule = getValuationDecisionRule(stock);
 
         return `
             <tr>
@@ -651,10 +792,16 @@ function renderMagicFormulaTable() {
                     <div class="stock-title">${stock.code}</div>
                     <div class="stock-name">${stock.name}</div>
                 </td>
-                <td><span class="badge-highlight badge-emerald">%${stock.metrics.roic}</span></td>
+                <td>${getRoicBadge(stock.metrics.roic)}</td>
+                <td>${getWaccBadge(stock.metrics.wacc)}</td>
                 <td>%${earningsYield} (${stock.metrics.peRatio}x F/K)</td>
                 <td><span class="badge-highlight badge-cyan">${compositeScore} Puan</span></td>
-                <td>${index < 3 ? '<span class="badge-highlight badge-emerald">MÜKEMMEL SEÇİM</span>' : '<span class="badge-highlight badge-amber">NÖTR</span>'}</td>
+                <td>
+                    <div>${valuationRule.badge}</div>
+                    <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px;">
+                        ${valuationRule.explanation}
+                    </div>
+                </td>
             </tr>
         `;
     }).join("");
@@ -667,9 +814,12 @@ function openCompanyModal(code) {
     if (!stock) return;
 
     const modal = document.getElementById("companyModal");
+    const eva = (stock.metrics.roic - stock.metrics.wacc).toFixed(1);
+    const valuationRule = getValuationDecisionRule(stock);
+
     document.getElementById("modalTitle").innerHTML = `${stock.code} - ${stock.name}`;
     document.getElementById("modalBody").innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
             <div style="font-size: 0.95rem; font-weight: 700;">
                 BIST Fiyatı: <span style="color: var(--accent-primary); font-family: var(--font-mono);">${stock.price.toLocaleString("tr-TR", {minimumFractionDigits: 2})} ₺</span>
             </div>
@@ -678,30 +828,43 @@ function openCompanyModal(code) {
             </a>
         </div>
 
+        <!-- Değerleme Kararı Açıklaması Kutu -->
+        <div style="background: var(--bg-main); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <span style="font-weight: 700; color: var(--text-primary);">Değerleme Kararı & Kuralı:</span>
+                ${valuationRule.badge}
+            </div>
+            <div style="font-size: 0.88rem; color: var(--text-secondary);">
+                ${valuationRule.explanation}
+            </div>
+        </div>
+
         <div class="modal-grid-2" style="margin-bottom: 20px;">
             <div class="chart-container-box">
                 <h4 style="font-family: var(--font-heading); margin-bottom: 12px; color: var(--text-primary);">
-                    8 Çeyreklik ROE vs ROIC Trend Grafiği (2024/Q2 - 2026/Q1)
+                    8 Çeyreklik ROE vs ROIC vs WACC Trend Grafiği (2024/Q2 - 2026/Q1)
                 </h4>
                 <canvas id="modalChartCanvas"></canvas>
             </div>
             <div>
                 <h4 style="font-family: var(--font-heading); margin-bottom: 12px; color: var(--text-primary);">
-                    DuPont Analizi (ROE %${stock.metrics.roe})
+                    ROIC, WACC & EVA Katma Değer Analizi
                 </h4>
                 <div style="background: var(--bg-main); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 16px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>Net Marj:</span><strong>%${stock.metrics.dupont.netMargin}</strong></div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>Devir Hızı:</span><strong>${stock.metrics.dupont.assetTurnover}x</strong></div>
-                    <div style="display: flex; justify-content: space-between;"><span>Kaldıraç:</span><strong>${stock.metrics.dupont.leverage}x</strong></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>ROIC (Sermaye Getirisi):</span><strong style="color: var(--accent-success);">%${stock.metrics.roic}</strong></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>WACC (Sermaye Maliyeti):</span><strong style="color: var(--accent-primary);">%${stock.metrics.wacc}</strong></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>EVA Spread (Fark):</span><strong class="${eva >= 0 ? 'trend-up' : 'trend-down'}">${eva >= 0 ? '+' : ''}%${eva}</strong></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>NOPAT:</span><strong>${stock.metrics.nopat} Milyon TL</strong></div>
+                    <div style="display: flex; justify-content: space-between;"><span>Yatırılan Sermaye:</span><strong>${stock.metrics.investedCapital} Milyon TL</strong></div>
                 </div>
 
                 <h4 style="font-family: var(--font-heading); margin-bottom: 12px; color: var(--text-primary);">
-                    ROIC & Sermaye Yapısı
+                    DuPont Analizi (ROE %${stock.metrics.roe})
                 </h4>
                 <div style="background: var(--bg-main); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>ROIC (Sermaye Getirisi):</span><strong style="color: var(--accent-success);">%${stock.metrics.roic}</strong></div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>NOPAT:</span><strong>${stock.metrics.nopat} Milyon TL</strong></div>
-                    <div style="display: flex; justify-content: space-between;"><span>Yatırılan Sermaye:</span><strong>${stock.metrics.investedCapital} Milyon TL</strong></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>Net Marj:</span><strong>%${stock.metrics.dupont.netMargin}</strong></div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;"><span>Devir Hızı:</span><strong>${stock.metrics.dupont.assetTurnover}x</strong></div>
+                    <div style="display: flex; justify-content: space-between;"><span>Kaldıraç:</span><strong>${stock.metrics.dupont.leverage}x</strong></div>
                 </div>
             </div>
         </div>
@@ -719,7 +882,8 @@ function openCompanyModal(code) {
             data: {
                 labels: stock.historical8Q.map(h => h.quarter),
                 datasets: [
-                    { label: 'ROIC (%)', data: stock.historical8Q.map(h => h.roic), borderColor: '#0284c7', borderWidth: 3, tension: 0.3 },
+                    { label: 'ROIC (%)', data: stock.historical8Q.map(h => h.roic), borderColor: '#10b981', borderWidth: 3, tension: 0.3 },
+                    { label: 'WACC (%)', data: stock.historical8Q.map(h => h.wacc || stock.metrics.wacc), borderColor: '#0284c7', borderWidth: 2, borderDash: [5, 5], tension: 0.3 },
                     { label: 'ROE (%)', data: stock.historical8Q.map(h => h.roe), borderColor: '#4f46e5', borderWidth: 3, tension: 0.3 }
                 ]
             },

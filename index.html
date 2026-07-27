@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BIST Canlı Fiyat Akışlı ROIC / ROE & KAP İkaz Terminali</title>
-    <meta name="description" content="14 BIST Şirketinin portföy yönetimi, ağırlıklı ROIC verimliliği, Telegram bildirim botu, özel alarm tanımlama ve çeyreklik finansal analiz platformu.">
+    <title>BIST Canlı Fiyat Akışlı ROIC / ROE / WACC & KAP İkaz Terminali</title>
+    <meta name="description" content="14 BIST Şirketinin portföy yönetimi, ağırlıklı ROIC/ROE/WACC verimliliği, Telegram bildirim botu, özel alarm tanımlama ve çeyreklik finansal analiz platformu.">
 
     <!-- Lucide Icons & Chart.js CDN -->
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -31,8 +31,8 @@
                     <i data-lucide="line-chart"></i>
                 </div>
                 <div>
-                    <h1 class="brand-title">BIST TARİHSEL ROIC & ROE KONTROL MERKEZİ</h1>
-                    <div class="brand-subtitle">14 Şirket Özel Sıralı BIST Fiyat Akışı & Portföy Verimlilik Terminali</div>
+                    <h1 class="brand-title">BIST TARİHSEL ROIC, ROE & WACC KONTROL MERKEZİ</h1>
+                    <div class="brand-subtitle">14 Şirket Özel Sıralı BIST Fiyat Akışı, WACC Sermaye Maliyeti & Portföy Terminali</div>
                 </div>
             </div>
 
@@ -66,7 +66,7 @@
         <!-- Tab Navigation -->
         <nav class="tab-navigation">
             <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard', this)">
-                <i data-lucide="table"></i> ROIC & ROE Ana Tablo (14 Hisse)
+                <i data-lucide="table"></i> ROIC, ROE & WACC Ana Tablo
             </button>
             <button class="tab-btn" data-tab="portfolioPane" onclick="switchTab('portfolioPane', this)">
                 <i data-lucide="pie-chart"></i> Portföyüm & Kâr/Zarar
@@ -112,8 +112,18 @@
                     </select>
                 </div>
 
-                <div style="font-size: 0.85rem; color: var(--text-muted); font-weight: 500;">
-                    Hisseler <strong>istediğiniz özel 1-14 sıralamasında</strong> kilitlenmiş gerçek borsa fiyatlarıyla sunulur.
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <!-- Traffic Light Legend Help -->
+                    <div style="font-size: 0.82rem; display: flex; gap: 8px; align-items: center; background: var(--bg-card); padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+                        <span style="font-weight: 700; color: var(--text-primary);">Trafik Işığı:</span>
+                        <span class="badge-highlight badge-emerald">🟢 Olumlu (İyi)</span>
+                        <span class="badge-highlight badge-amber">🟡 Nötr (Makul)</span>
+                        <span class="badge-highlight badge-rose">🔴 Olumsuz (Risk)</span>
+                    </div>
+
+                    <button class="btn-primary" style="font-size: 0.82rem; padding: 6px 12px;" onclick="openValuationRulesHelpModal()">
+                        <i data-lucide="help-circle"></i> Değerleme Kuralları Rehberi
+                    </button>
                 </div>
             </div>
 
@@ -126,12 +136,14 @@
                             <th onclick="sortTable('sector')">Sektör</th>
                             <th onclick="sortTable('price')">Canlı BIST Fiyatı</th>
                             <th onclick="sortTable('roic')">ROIC (%) <i data-lucide="arrow-up-down" style="width:14px;"></i></th>
+                            <th onclick="sortTable('wacc')">WACC (%) <i data-lucide="arrow-up-down" style="width:14px;"></i></th>
+                            <th onclick="sortTable('eva')">EVA Spread (ROIC-WACC)</th>
                             <th onclick="sortTable('roe')">ROE (%) <i data-lucide="arrow-up-down" style="width:14px;"></i></th>
                             <th>DuPont (Marj / Devir / Kaldıraç)</th>
                             <th onclick="sortTable('peRatio')">F/K</th>
                             <th onclick="sortTable('pbRatio')">PD/DD</th>
                             <th onclick="sortTable('netDebtToEbitda')">Net Borç/FAVÖK</th>
-                            <th>İkaz Sinyalleri & Özel Alarmlar</th>
+                            <th>Değerleme Kuralı & Kararı</th>
                             <th>Detay & Rapor</th>
                         </tr>
                     </thead>
@@ -146,10 +158,10 @@
         <section class="tab-pane" id="portfolioPane">
             <div style="margin-bottom: 20px;">
                 <h3 style="font-family: var(--font-heading); font-size: 1.3rem; color: var(--text-primary);">
-                    💼 Kişisel Portföy Yönetimi & Ağırlıklı ROIC Verimlilik Analizi
+                    💼 Kişisel Portföy Yönetimi & Ağırlıklı ROIC / WACC Analizi
                 </h3>
                 <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                    Elinizdeki hisse adedini ve ortalama maliyetinizi girin; toplam portföy değerinizi, kâr/zararınızı ve **portföyünüzün ağırlıklı ROIC verimliliğini** hesaplayalım.
+                    Elinizdeki hisse adedini ve ortalama maliyetinizi girin; toplam portföy değerinizi, kâr/zararınızı, **ağırlıklı ROIC getirinizi** ve **WACC sermaye maliyeti farkınızı** hesaplayalım.
                 </p>
             </div>
 
@@ -174,6 +186,16 @@
                     <div class="metric-value" id="portWeightedRoic">%0.0</div>
                     <div class="metric-subtext">Yatırımınızın Sermaye Verim Ağırlığı</div>
                 </div>
+                <div class="metric-card">
+                    <div class="metric-header"><span>PORTFÖY AĞIRLIKLI WACC</span><div class="metric-icon icon-purple"><i data-lucide="percent"></i></div></div>
+                    <div class="metric-value" id="portWeightedWacc">%0.0</div>
+                    <div class="metric-subtext">Ortalama Sermaye Maliyetiniz</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-header"><span>NET EVA KATMA DEĞER</span><div class="metric-icon icon-emerald"><i data-lucide="sparkles"></i></div></div>
+                    <div class="metric-value" id="portNetEva">%0.0</div>
+                    <div class="metric-subtext">ROIC - WACC Net Verimlilik Farkı</div>
+                </div>
             </div>
 
             <div class="table-wrapper">
@@ -189,6 +211,8 @@
                             <th>Güncel Değer</th>
                             <th>Kâr / Zarar</th>
                             <th>Hisse ROIC</th>
+                            <th>Hisse WACC</th>
+                            <th>EVA Spread (ROIC-WACC)</th>
                         </tr>
                     </thead>
                     <tbody id="portfolioTableBody">
@@ -234,6 +258,7 @@
                         <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Finansal Metrik:</label>
                         <select class="select-custom" id="ruleMetric">
                             <option value="roic">ROIC (%)</option>
+                            <option value="wacc">WACC (%)</option>
                             <option value="roe">ROE (%)</option>
                             <option value="peRatio">F/K Oranı</option>
                             <option value="pbRatio">PD/DD Oranı</option>
@@ -264,10 +289,10 @@
                     <div>
                         <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Rozet Rengi:</label>
                         <select class="select-custom" id="ruleBadge">
-                            <option value="badge-emerald">Yeşil (Pozitif)</option>
-                            <option value="badge-cyan">Mavi (Bilgi)</option>
-                            <option value="badge-amber">Sarı (Uyarı)</option>
-                            <option value="badge-rose">Kırmızı (Tehlike)</option>
+                            <option value="badge-emerald">🟢 Yeşil (Olumlu)</option>
+                            <option value="badge-amber">🟡 Sarı (Nötr)</option>
+                            <option value="badge-rose">🔴 Kırmızı (Olumsuz)</option>
+                            <option value="badge-cyan">🔵 Mavi (Bilgi)</option>
                         </select>
                     </div>
 
@@ -296,7 +321,7 @@
                     📱 Telegram Canlı Anlık İkaz Ayarları
                 </h3>
                 <p style="color: var(--text-secondary); font-size: 0.92rem; margin-bottom: 20px;">
-                    Bilgisayar başında olmasanız bile Telegram botumuz yeni KAP bildirimi veya ROIC değişimi olduğunda telefonunuza anında ücretsiz mesaj gönderir.
+                    Bilgisayar başında olmasanız bile Telegram botumuz yeni KAP bildirimi veya ROIC/WACC değişimi olduğunda telefonunuza anında ücretsiz mesaj gönderir.
                 </p>
 
                 <div style="max-width: 600px; background: var(--bg-main); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 24px;">
@@ -337,7 +362,7 @@
                         BIST Canlı Performans & Verimlilik Grafiği
                     </h3>
                     <p style="color: var(--text-secondary); font-size: 0.88rem;">
-                        14 BIST hissenizin çeyreklik ciro büyümesi, ROIC ve ROE trend analizi.
+                        14 BIST hissenizin çeyreklik ciro büyümesi, ROIC, ROE ve WACC maliyet trend analizi.
                     </p>
                 </div>
                 <div style="display: flex; gap: 12px; align-items: center;">
@@ -377,13 +402,14 @@
                         Tarihsel 8 Çeyreklik Performans Isı Haritası (2024/Q2 - 2026/Q1)
                     </h3>
                     <p style="color: var(--text-secondary); font-size: 0.88rem;">
-                        Şirketlerin 8 çeyreklik verimlilik ivmesini yeşil/kırmızı ısı tonlarıyla takip edin.
+                        Şirketlerin 8 çeyreklik verimlilik ivmesini yeşil/sarı/kırmızı ısı tonlarıyla takip edin.
                     </p>
                 </div>
 
                 <div class="filter-group">
                     <button class="tab-btn active" id="btnMatrixRoic" onclick="setMatrixMetric('roic')">ROIC Matrisi</button>
                     <button class="tab-btn" id="btnMatrixRoe" onclick="setMatrixMetric('roe')">ROE Matrisi</button>
+                    <button class="tab-btn" id="btnMatrixWacc" onclick="setMatrixMetric('wacc')">WACC Matrisi</button>
                 </div>
             </div>
 
@@ -414,10 +440,10 @@
         <section class="tab-pane" id="compareChartPane">
             <div style="margin-bottom: 20px;">
                 <h3 style="font-family: var(--font-heading); font-size: 1.2rem; color: var(--text-primary);">
-                    Çoklu Şirket ROIC / ROE Trend Karşılaştırma Grafiği
+                    Çoklu Şirket ROIC / ROE / WACC Trend Karşılaştırma Grafiği
                 </h3>
                 <p style="color: var(--text-secondary); font-size: 0.88rem;">
-                    Portföydeki şirketlerin 8 çeyreklik sermaye verimlilik çizgilerini üst üste koyarak karşılaştırın.
+                    Portföydeki şirketlerin 8 çeyreklik sermaye verimlilik ve maliyet çizgilerini üst üste koyarak karşılaştırın.
                 </p>
             </div>
 
@@ -446,10 +472,10 @@
         <section class="tab-pane" id="magicFormula">
             <div style="margin-bottom: 20px;">
                 <h3 style="font-family: var(--font-heading); color: var(--text-primary); font-size: 1.2rem; margin-bottom: 6px;">
-                    Sihirli Formül (Magic Formula) & Verimlilik Sıralaması
+                    Sihirli Formül (Magic Formula) & Değerleme Kuralı Sıralaması
                 </h3>
                 <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                    Joel Greenblatt yaklaşımıyla en yüksek ROIC ve en düşük F/K oranına sahip şirketler.
+                    Joel Greenblatt yaklaşımıyla en yüksek ROIC ve en düşük F/K oranına sahip şirketlerin detaylı kural açıklamalarıyla analizi.
                 </p>
             </div>
 
@@ -460,9 +486,10 @@
                             <th>Derece</th>
                             <th>Hisse</th>
                             <th>ROIC (%)</th>
+                            <th>WACC (%)</th>
                             <th>Kâr Verimi (1/FK)</th>
                             <th>Bileşik Skor</th>
-                            <th>Değerleme Kararı</th>
+                            <th>Uygulanan Değerleme Kuralı & Açıklama</th>
                         </tr>
                     </thead>
                     <tbody id="magicFormulaBody">
@@ -486,11 +513,60 @@
                 </div>
                 <div>
                     <h2 id="modalTitle" style="font-family: var(--font-heading); font-size: 1.4rem;">-</h2>
-                    <span style="font-size: 0.85rem; color: var(--accent-secondary);">Finansal Performans & ROIC/ROE Analizi</span>
+                    <span style="font-size: 0.85rem; color: var(--accent-secondary);">Finansal Performans & ROIC / ROE / WACC Analizi</span>
                 </div>
             </div>
             <div id="modalBody">
                 <!-- Rendered dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Valuation Rules Help Modal -->
+    <div class="modal-overlay" id="valuationRulesHelpModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <button class="modal-close" onclick="closeValuationRulesHelpModal()">
+                <i data-lucide="x"></i>
+            </button>
+            <div class="modal-header-info" style="margin-bottom: 16px;">
+                <div class="brand-logo" style="width: 44px; height: 44px; background: rgba(16, 185, 129, 0.15); color: #10b981;">
+                    <i data-lucide="help-circle"></i>
+                </div>
+                <div>
+                    <h3 style="font-family: var(--font-heading); font-size: 1.25rem;">Değerleme Kuralları & Renk Rehberi</h3>
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Tabloda hangi finansal kuralların uygulandığını inceleyin</span>
+                </div>
+            </div>
+            
+            <div style="font-size: 0.88rem; line-height: 1.6; color: var(--text-primary);">
+                <div style="margin-bottom: 16px; background: var(--bg-main); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <h4 style="color: #10b981; font-family: var(--font-heading); margin-bottom: 6px;">1. Ekonomik Katma Değer (EVA Rule): ROIC vs WACC</h4>
+                    <p style="margin: 0; color: var(--text-secondary);">
+                        - 🟢 <strong>ROIC > WACC (Spread > 0)</strong>: Şirket sermaye maliyetinin üzerinde getiri üreterek hissedara <strong>Ekonomik Katma Değer (EVA)</strong> yaratıyor.<br>
+                        - 🔴 <strong>ROIC < WACC (Spread < 0)</strong>: Şirket sermaye maliyetini karşılayamıyor, sermaye eritme riski taşıyor.
+                    </p>
+                </div>
+
+                <div style="margin-bottom: 16px; background: var(--bg-main); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <h4 style="color: #0284c7; font-family: var(--font-heading); margin-bottom: 6px;">2. Joel Greenblatt Sihirli Formül (Magic Formula Rule)</h4>
+                    <p style="margin: 0; color: var(--text-secondary);">
+                        Formül: <code>Bileşik Skor = (ROIC × %60) + (Kâr Verimi (1/FK) × %40)</code><br>
+                        - 🟢 <strong>Derece 1-3</strong>: "Sihirli Formül Şampiyonu" (Yüksek sermaye verimi + Uygun değerleme F/K).<br>
+                        - 🟡 <strong>Derece 4-8</strong>: "Sağlıklı & Dengeli Verimlilik".<br>
+                        - 🔴 <strong>Derece 9+</strong>: "Düşük Verim veya Yüksek F/K".
+                    </p>
+                </div>
+
+                <div style="margin-bottom: 16px; background: var(--bg-main); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                    <h4 style="color: #f59e0b; font-family: var(--font-heading); margin-bottom: 6px;">3. Trafik Işığı Renk Eşikleri</h4>
+                    <p style="margin: 0; color: var(--text-secondary);">
+                        - <strong>ROIC</strong>: 🟢 ≥%30 | 🟡 %20-%30 | 🔴 <%20<br>
+                        - <strong>ROE</strong>: 🟢 ≥%40 | 🟡 %25-%40 | 🔴 <%25<br>
+                        - <strong>F/K</strong>: 🟢 ≤8x | 🟡 8x-14x | 🔴 >14x<br>
+                        - <strong>PD/DD</strong>: 🟢 ≤2.5x | 🟡 2.5x-4.5x | 🔴 >4.5x<br>
+                        - <strong>Net Borç/FAVÖK</strong>: 🟢 ≤0x (Borçsuz) | 🟡 0x-1.5x (Makul) | 🔴 >1.5x (Borç Riski)
+                    </p>
+                </div>
             </div>
         </div>
     </div>
