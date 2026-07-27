@@ -122,9 +122,47 @@ async function fetchLiveBistPrices() {
     }
 }
 
-// ----------------------------------------------------
-// Traffic Light Badge Helper Functions (🟢 Yeşil, 🟡 Sarı, 🔴 Kırmızı)
-// ----------------------------------------------------
+// Exact ROIC - WACC Evaluation Rules from User Image
+function getRoicWaccEvaluation(roic, wacc) {
+    const eva = parseFloat((roic - wacc).toFixed(1));
+    if (eva < 0) {
+        return {
+            badge: `<span class="badge-highlight badge-rose">🔴 Değer yok ediyor.</span>`,
+            text: "Değer yok ediyor.",
+            scoreText: `< 0 (EVA -%${Math.abs(eva)})`,
+            badgeShort: `<span class="badge-highlight badge-rose">🔴 -%${Math.abs(eva)} (Yok Ediyor)</span>`
+        };
+    } else if (eva <= 5.0) {
+        return {
+            badge: `<span class="badge-highlight badge-amber">🟡 Sermaye maliyetini az farkla geçiyor.</span>`,
+            text: "Sermaye maliyetini az farkla geçiyor.",
+            scoreText: `0-5 puan (+%${eva})`,
+            badgeShort: `<span class="badge-highlight badge-amber">🟡 +%${eva} (Az Farkla)</span>`
+        };
+    } else if (eva <= 10.0) {
+        return {
+            badge: `<span class="badge-highlight badge-emerald">🟢 İyi şirket.</span>`,
+            text: "İyi şirket.",
+            scoreText: `5-10 puan (+%${eva})`,
+            badgeShort: `<span class="badge-highlight badge-emerald">🟢 +%${eva} (İyi)</span>`
+        };
+    } else if (eva <= 15.0) {
+        return {
+            badge: `<span class="badge-highlight badge-emerald">🟢 Çok kaliteli şirket.</span>`,
+            text: "Çok kaliteli şirket.",
+            scoreText: `10-15 puan (+%${eva})`,
+            badgeShort: `<span class="badge-highlight badge-emerald">🟢 +%${eva} (Çok Kaliteli)</span>`
+        };
+    } else {
+        return {
+            badge: `<span class="badge-highlight" style="background: rgba(245, 158, 11, 0.18); color: #d97706; border: 1px solid rgba(245, 158, 11, 0.4);">⭐ Elit şirketler. Uzun vadede bileşik getiri oluşturma potansiyeli yüksektir.</span>`,
+            text: "Elit şirketler. Uzun vadede bileşik getiri oluşturma potansiyeli yüksektir.",
+            scoreText: `15+ puan (+%${eva})`,
+            badgeShort: `<span class="badge-highlight badge-amber" style="background: rgba(245, 158, 11, 0.2); color: #d97706;">⭐ +%${eva} (Elit)</span>`
+        };
+    }
+}
+
 function getRoicBadge(roic) {
     if (roic >= 30) return `<span class="badge-highlight badge-emerald">🟢 %${roic} (Yüksek)</span>`;
     if (roic >= 20) return `<span class="badge-highlight badge-amber">🟡 %${roic} (Makul)</span>`;
@@ -136,9 +174,8 @@ function getWaccBadge(wacc) {
 }
 
 function getEvaBadge(roic, wacc) {
-    const eva = (roic - wacc).toFixed(1);
-    if (eva > 0) return `<span class="badge-highlight badge-emerald">🟢 +%${eva} (EVA+)</span>`;
-    return `<span class="badge-highlight badge-rose">🔴 %${eva} (EVA-)</span>`;
+    const evalData = getRoicWaccEvaluation(roic, wacc);
+    return evalData.badgeShort;
 }
 
 function getRoeBadge(roe) {
@@ -167,31 +204,12 @@ function getDebtBadge(netDebt) {
 
 // Explicit Valuation Decision Rule Engine
 function getValuationDecisionRule(stock) {
-    const eva = stock.metrics.roic - stock.metrics.wacc;
-    const earningsYield = (1 / stock.metrics.peRatio) * 100;
-    const compositeScore = ((stock.metrics.roic * 0.6) + (earningsYield * 0.4)).toFixed(1);
+    const evalData = getRoicWaccEvaluation(stock.metrics.roic, stock.metrics.wacc);
 
-    if (eva > 10 && stock.metrics.peRatio <= 13.0) {
-        return {
-            badge: `<span class="badge-highlight badge-emerald">🟢 MÜKEMMEL DEĞERLEME</span>`,
-            explanation: `<strong>EVA Kuralı:</strong> ROIC (%${stock.metrics.roic}) > WACC (%${stock.metrics.wacc}) farkı +%${eva.toFixed(1)} ve F/K (${stock.metrics.peRatio}x) cazip. Katma değer yaratıyor.`
-        };
-    } else if (eva > 0 && stock.metrics.peRatio <= 15.0) {
-        return {
-            badge: `<span class="badge-highlight badge-cyan">🔵 MAKUL KATMA DEĞER</span>`,
-            explanation: `<strong>Greenblatt Kuralı:</strong> ROIC sermaye maliyetini karşılıyor (EVA +%${eva.toFixed(1)}), Skor: ${compositeScore}.`
-        };
-    } else if (eva <= 0) {
-        return {
-            badge: `<span class="badge-highlight badge-rose">🔴 SERMAYE MALİYETİ ALTI</span>`,
-            explanation: `<strong>EVA Risk Kuralı:</strong> ROIC (%${stock.metrics.roic}) < WACC (%${stock.metrics.wacc}) sermaye maliyetini karşılayamıyor (-%${Math.abs(eva).toFixed(1)}).`
-        };
-    } else {
-        return {
-            badge: `<span class="badge-highlight badge-amber">🟡 NÖTR / DENGELİ</span>`,
-            explanation: `<strong>Denge Kuralı:</strong> ROIC ve F/K oranları sektör ortalamaları ile uyumlu.`
-        };
-    }
+    return {
+        badge: evalData.badge,
+        explanation: `<strong>ROIC - WACC Kuralı (${evalData.scoreText}):</strong> ${evalData.text}`
+    };
 }
 
 function openValuationRulesHelpModal() {
