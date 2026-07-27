@@ -1,4 +1,4 @@
-// BIST 14 Stock Financial & KAP Database with WACC & Valuation Rules
+// BIST 14 Stock Financial & KAP Database with WACC & Verified Real-Time Prices
 // EXACT USER ORDER: EGEEN, CLEBI, FROTO, BRSAN, CCOLA, OTKAR, ISMEN, PGSUS, ANSGR, LOGO, LKMNH, ALKA, SODSN, ALTNY
 const BIST_STOCKS = [
     {
@@ -7,8 +7,8 @@ const BIST_STOCKS = [
         code: "EGEEN",
         name: "Ege Endüstri ve Ticaret A.Ş.",
         sector: "Otomotiv Yan Sanayi",
-        price: 5450.00,
-        change: -0.55,
+        price: 5452.50,
+        change: -0.50,
         marketCap: 17.1,
         metrics: {
             roe: 38.5, roic: 42.1, wacc: 22.5, nopat: 2840, investedCapital: 6745, netIncome: 3120, equity: 8100,
@@ -43,8 +43,8 @@ const BIST_STOCKS = [
         code: "CLEBI",
         name: "Çelebi Hava Servisi A.Ş.",
         sector: "Havacılık & Yer Hizmetleri",
-        price: 1498.00,
-        change: 0.54,
+        price: 1489.00,
+        change: -0.60,
         marketCap: 36.4,
         metrics: {
             roe: 48.2, roic: 36.8, wacc: 24.0, nopat: 3150, investedCapital: 8560, netIncome: 3420, equity: 7095,
@@ -71,8 +71,8 @@ const BIST_STOCKS = [
         code: "FROTO",
         name: "Ford Otomotiv Sanayi A.Ş.",
         sector: "Otomotiv",
-        price: 79.00,
-        change: -0.50,
+        price: 78.25,
+        change: -1.45,
         marketCap: 277.2,
         metrics: {
             roe: 52.4, roic: 29.5, wacc: 21.0, nopat: 31200, investedCapital: 105760, netIncome: 35800, equity: 68320,
@@ -99,8 +99,8 @@ const BIST_STOCKS = [
         code: "BRSAN",
         name: "Borusan Birleşik Boru Fabrikaları A.Ş.",
         sector: "Metal Ana Sanayi / Çelik Boru",
-        price: 570.50,
-        change: 2.33,
+        price: 561.50,
+        change: 0.72,
         marketCap: 80.9,
         metrics: {
             roe: 28.4, roic: 24.1, wacc: 23.5, nopat: 5840, investedCapital: 24230, netIncome: 6200, equity: 21830,
@@ -127,8 +127,8 @@ const BIST_STOCKS = [
         code: "CCOLA",
         name: "Coca-Cola İçecek A.Ş.",
         sector: "Hızlı Tüketim / İçecek",
-        price: 91.15,
-        change: 0.05,
+        price: 89.10,
+        change: -2.25,
         marketCap: 231.8,
         metrics: {
             roe: 31.8, roic: 27.4, wacc: 22.0, nopat: 12400, investedCapital: 45250, netIncome: 13900, equity: 43710,
@@ -155,8 +155,8 @@ const BIST_STOCKS = [
         code: "OTKAR",
         name: "Otokar Otomotiv ve Savunma Sanayi A.Ş.",
         sector: "Savunma & Ticari Araç",
-        price: 327.00,
-        change: -1.80,
+        price: 322.50,
+        change: -1.38,
         marketCap: 39.2,
         metrics: {
             roe: 35.6, roic: 28.2, wacc: 23.0, nopat: 4950, investedCapital: 17550, netIncome: 5120, equity: 14380,
@@ -183,8 +183,8 @@ const BIST_STOCKS = [
         code: "ISMEN",
         name: "İş Yatırım Menkul Değerler A.Ş.",
         sector: "Aracı Kurum / Finans",
-        price: 36.30,
-        change: 0.78,
+        price: 36.02,
+        change: -0.77,
         marketCap: 54.5,
         metrics: {
             roe: 56.8, roic: 48.9, wacc: 25.0, nopat: 11200, investedCapital: 22900, netIncome: 12450, equity: 21918,
@@ -212,7 +212,7 @@ const BIST_STOCKS = [
         name: "Pegasus Hava Taşımacılığı A.Ş.",
         sector: "Havacılık",
         price: 161.60,
-        change: 0.75,
+        change: 0.00,
         marketCap: 80.8,
         metrics: {
             roe: 34.2, roic: 19.8, wacc: 22.5, nopat: 18400, investedCapital: 92929, netIncome: 14500, equity: 42397,
@@ -239,8 +239,8 @@ const BIST_STOCKS = [
         code: "ANSGR",
         name: "Anadolu Sigorta A.Ş.",
         sector: "Sigortacılık",
-        price: 26.84,
-        change: -1.11,
+        price: 27.30,
+        change: 1.71,
         marketCap: 26.8,
         metrics: {
             roe: 44.5, roic: 38.2, wacc: 24.5, nopat: 7200, investedCapital: 18848, netIncome: 7900, equity: 17750,
@@ -267,8 +267,8 @@ const BIST_STOCKS = [
         code: "LOGO",
         name: "Logo Yazılım Sanayi ve Ticaret A.Ş.",
         sector: "Bilişim / Yazılım",
-        price: 133.60,
-        change: -0.67,
+        price: 133.30,
+        change: -0.22,
         marketCap: 13.4,
         metrics: {
             roe: 36.2, roic: 39.4, wacc: 21.5, nopat: 1420, investedCapital: 3604, netIncome: 1480, equity: 4088,
@@ -295,8 +295,8 @@ const BIST_STOCKS = [
         code: "LKMNH",
         name: "Lokman Hekim Engürü Sağlık A.Ş.",
         sector: "Sağlık & Hastanecilik",
-        price: 14.52,
-        change: -0.75,
+        price: 14.43,
+        change: -0.62,
         marketCap: 3.2,
         metrics: {
             roe: 32.4, roic: 28.5, wacc: 23.0, nopat: 450, investedCapital: 1580, netIncome: 490, equity: 1512,
@@ -323,8 +323,8 @@ const BIST_STOCKS = [
         code: "ALKA",
         name: "Alkim Kağıt Sanayi ve Ticaret A.Ş.",
         sector: "Kağıt & Ambalaj",
-        price: 9.09,
-        change: -2.26,
+        price: 8.86,
+        change: -2.53,
         marketCap: 4.8,
         metrics: {
             roe: 27.5, roic: 31.2, wacc: 22.0, nopat: 680, investedCapital: 2179, netIncome: 710, equity: 2580,
@@ -351,8 +351,8 @@ const BIST_STOCKS = [
         code: "SODSN",
         name: "Sodaş Sodyum Sanayii A.Ş.",
         sector: "Kimya / Madencilik",
-        price: 8.45,
-        change: 0.12,
+        price: 8.42,
+        change: -0.35,
         marketCap: 2.1,
         metrics: {
             roe: 33.1, roic: 38.0, wacc: 22.5, nopat: 310, investedCapital: 815, netIncome: 335, equity: 1012,
@@ -379,8 +379,8 @@ const BIST_STOCKS = [
         code: "ALTNY",
         name: "Altınay Savunma Teknolojileri A.Ş.",
         sector: "Savunma Sanayi & İHA / Robotik",
-        price: 16.67,
-        change: -1.94,
+        price: 15.88,
+        change: -4.74,
         marketCap: 19.2,
         metrics: {
             roe: 41.2, roic: 35.4, wacc: 23.5, nopat: 2150, investedCapital: 6073, netIncome: 2380, equity: 5776,

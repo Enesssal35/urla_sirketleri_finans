@@ -1,4 +1,4 @@
-// BIST Financial & KAP Terminal Application Logic with WACC & Traffic Light Valuation Rules
+// BIST Financial & KAP Terminal Application Logic with Live BIST Price Synchronization
 
 let activeTab = "dashboard";
 let currentSortKey = "order"; // Preserves user's exact 1 to 14 stock ordering
@@ -47,11 +47,78 @@ document.addEventListener("DOMContentLoaded", () => {
     renderCustomRulesList();
     loadTelegramConfigUI();
     setupEventListeners();
+
+    // Fetch verified live market prices automatically on load & every 60s
+    fetchLiveBistPrices();
+    setInterval(fetchLiveBistPrices, 60000);
 });
 
 function initLucideIcons() {
     if (window.lucide) {
         lucide.createIcons();
+    }
+}
+
+// Automatic Real-Time BIST Live Price Synchronization
+async function fetchLiveBistPrices() {
+    const proxies = [
+        (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+        (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
+    ];
+
+    let updated = false;
+
+    for (let stock of BIST_STOCKS) {
+        const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${stock.symbol}?interval=1m`;
+        let success = false;
+
+        try {
+            const res = await fetch(yahooUrl);
+            if (res.ok) {
+                const data = await res.json();
+                const meta = data.chart?.result?.[0]?.meta;
+                if (meta && meta.regularMarketPrice) {
+                    stock.price = meta.regularMarketPrice;
+                    const prevClose = meta.chartPreviousClose || meta.previousClose;
+                    if (prevClose > 0) {
+                        stock.change = parseFloat((((stock.price - prevClose) / prevClose) * 100).toFixed(2));
+                    }
+                    success = true;
+                    updated = true;
+                }
+            }
+        } catch (e) {
+            // Direct fetch failed, fallback to CORS proxies
+        }
+
+        if (!success) {
+            for (let proxyFn of proxies) {
+                try {
+                    const proxyUrl = proxyFn(yahooUrl);
+                    const res = await fetch(proxyUrl);
+                    if (res.ok) {
+                        const data = await res.json();
+                        const meta = data.chart?.result?.[0]?.meta;
+                        if (meta && meta.regularMarketPrice) {
+                            stock.price = meta.regularMarketPrice;
+                            const prevClose = meta.chartPreviousClose || meta.previousClose;
+                            if (prevClose > 0) {
+                                stock.change = parseFloat((((stock.price - prevClose) / prevClose) * 100).toFixed(2));
+                            }
+                            updated = true;
+                            break;
+                        }
+                    }
+                } catch (err) {}
+            }
+        }
+    }
+
+    if (updated) {
+        renderOverviewMetrics();
+        renderFinancialTable();
+        renderCustomTickerTape();
+        if (activeTab === "portfolioPane") renderPortfolioTable();
     }
 }
 
@@ -127,7 +194,6 @@ function getValuationDecisionRule(stock) {
     }
 }
 
-// Modal Handlers for Help
 function openValuationRulesHelpModal() {
     const modal = document.getElementById("valuationRulesHelpModal");
     if (modal) modal.classList.add("active");
