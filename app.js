@@ -863,6 +863,8 @@ function renderKapFeed() {
 
     feedContainer.innerHTML = allDisclosures.map(disc => {
         const sentimentClass = disc.sentiment === "positive" ? "badge-emerald" : "badge-amber";
+        const sentimentLabel = disc.sentiment === "positive" ? "🟢 POZİTİF SİNYAL" : "⚠️ RİSK SİNYALİ";
+
         return `
             <div class="kap-card">
                 <div>
@@ -870,17 +872,30 @@ function renderKapFeed() {
                         <span class="kap-ticker-badge">${disc.stockCode} - ${disc.category}</span>
                         <span class="kap-date">${disc.date}</span>
                     </div>
-                    <div class="kap-title">${disc.title}</div>
-                    <div class="kap-summary">${disc.summary}</div>
+                    <div class="kap-title" style="font-size: 1.05rem; line-height: 1.4; margin-bottom: 8px;">${disc.title}</div>
+                    <div class="kap-summary" style="margin-bottom: 12px; color: var(--text-secondary); font-size: 0.88rem;">${disc.summary}</div>
+
+                    <!-- Highlighted Positive and Negative Sides -->
+                    <div style="background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10b981; padding: 8px 12px; border-radius: 4px; margin-bottom: 8px; font-size: 0.84rem; line-height: 1.4;">
+                        <strong style="color: #10b981;">🟢 Olumlu Tarafı:</strong> ${disc.positiveImpact}
+                    </div>
+
+                    <div style="background: rgba(239, 68, 68, 0.08); border-left: 3px solid #ef4444; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 0.84rem; line-height: 1.4;">
+                        <strong style="color: #ef4444;">🔴 Olumsuz Yön / Risk:</strong> ${disc.negativeImpact}
+                    </div>
                 </div>
                 <div>
-                    <div style="margin-bottom: 10px; display: flex; justify-content: space-between;">
-                        <span class="badge-highlight ${sentimentClass}">CANLI POZİTİF SİNYAL</span>
-                        <span style="font-size: 0.78rem; color: var(--text-muted);">Etki: <strong>${disc.impactScore}/10</strong></span>
+                    <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                        <span class="badge-highlight ${sentimentClass}">${sentimentLabel}</span>
+                        <span style="font-size: 0.78rem; color: var(--text-muted);">KAP Etkisi: <strong>${disc.impactScore}/10</strong></span>
                     </div>
-                    <div class="ai-eval-box">
-                        <div class="ai-eval-title"><i data-lucide="sparkles"></i> Yapay Zeka Canlı İkaz:</div>
-                        <div>${disc.aiEvaluation}</div>
+                    <div class="ai-eval-box" style="background: var(--bg-main); border: 1px solid var(--border-color); padding: 10px 12px; border-radius: var(--radius-md);">
+                        <div class="ai-eval-title" style="font-size: 0.8rem; font-weight: 700; color: var(--accent-primary); margin-bottom: 4px;">
+                            <i data-lucide="zap"></i> ROE / ROIC / WACC Etkisi:
+                        </div>
+                        <div style="font-weight: 700; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-primary);">
+                            ${disc.financialImpactTag}
+                        </div>
                     </div>
                 </div>
             </div>
