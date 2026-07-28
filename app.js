@@ -775,11 +775,19 @@ function setMatrixMetric(metric) {
     const btnRoe = document.getElementById("btnMatrixRoe");
     const btnWacc = document.getElementById("btnMatrixWacc");
     const btnEva = document.getElementById("btnMatrixEva");
+    const indicatorName = document.getElementById("activeMatrixName");
 
     if (btnRoic) btnRoic.classList.toggle("active", metric === "roic");
     if (btnRoe) btnRoe.classList.toggle("active", metric === "roe");
     if (btnWacc) btnWacc.classList.toggle("active", metric === "wacc");
     if (btnEva) btnEva.classList.toggle("active", metric === "eva");
+
+    if (indicatorName) {
+        if (metric === "roic") indicatorName.innerText = "⚡ ROIC (Sermaye Verimliliği) Matrisi";
+        else if (metric === "roe") indicatorName.innerText = "📈 ROE (Özkaynak Kârlılığı) Matrisi";
+        else if (metric === "wacc") indicatorName.innerText = "🔵 WACC (Sermaye Maliyeti) Matrisi";
+        else if (metric === "eva") indicatorName.innerText = "✨ EVA (Ekonomik Katma Değer) Matrisi";
+    }
 
     renderHistoricalMatrix();
 }

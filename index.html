@@ -81,7 +81,7 @@
                 <i data-lucide="activity"></i> Canlı Performans Grafiği
             </button>
             <button class="tab-btn" data-tab="historicalMatrix" onclick="switchTab('historicalMatrix', this)">
-                <i data-lucide="grid"></i> 8 Çeyreklik Isı Haritası
+                <i data-lucide="grid"></i> 20 Çeyreklik Isı Haritası
             </button>
             <button class="tab-btn" data-tab="compareChartPane" onclick="switchTab('compareChartPane', this)">
                 <i data-lucide="trending-up"></i> Kıyaslama Grafiği
@@ -402,15 +402,18 @@
                         📜 Tarihsel 20 Çeyreklik Performans Isı Haritası & Trend Takibi (2021/Q2 - 2026/Q1)
                     </h3>
                     <p style="color: var(--text-secondary); font-size: 0.88rem;">
-                        14 BIST şirketinizin son 5 yıldaki 20 çeyreklik verimlilik ivmesini yeşil/sarı/kırmızı ısı tonlarıyla takip edin. Yeni çeyrekler açıklandıkça otomatik eklenir.
+                        14 BIST şirketinizin son 5 yıldaki 20 çeyreklik verimlilik ivmesini yeşil/sarı/kırmızı ısı tonlarıyla takip edin. 
                     </p>
+                    <div style="margin-top: 8px; font-weight: 700; font-size: 0.92rem; color: var(--accent-primary);" id="activeMatrixIndicator">
+                        🎯 Şu An Açık Olan Isı Haritası: <span style="background: rgba(79, 70, 229, 0.15); color: var(--accent-primary); padding: 4px 12px; border-radius: 14px; border: 1px solid rgba(79, 70, 229, 0.3);" id="activeMatrixName">ROIC (Sermaye Verimliliği) Matrisi</span>
+                    </div>
                 </div>
 
-                <div class="filter-group">
-                    <button class="tab-btn active" id="btnMatrixRoic" onclick="setMatrixMetric('roic')">ROIC Matrisi</button>
-                    <button class="tab-btn" id="btnMatrixRoe" onclick="setMatrixMetric('roe')">ROE Matrisi</button>
-                    <button class="tab-btn" id="btnMatrixWacc" onclick="setMatrixMetric('wacc')">WACC Matrisi</button>
-                    <button class="tab-btn" id="btnMatrixEva" onclick="setMatrixMetric('eva')">EVA Katma Değer Matrisi</button>
+                <div class="filter-group" style="gap: 8px;">
+                    <button class="matrix-btn active" id="btnMatrixRoic" onclick="setMatrixMetric('roic')">⚡ ROIC Matrisi</button>
+                    <button class="matrix-btn" id="btnMatrixRoe" onclick="setMatrixMetric('roe')">📈 ROE Matrisi</button>
+                    <button class="matrix-btn" id="btnMatrixWacc" onclick="setMatrixMetric('wacc')">🔵 WACC Matrisi</button>
+                    <button class="matrix-btn" id="btnMatrixEva" onclick="setMatrixMetric('eva')">✨ EVA Katma Değer Matrisi</button>
                 </div>
             </div>
 
