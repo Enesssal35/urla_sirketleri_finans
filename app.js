@@ -710,27 +710,48 @@ function getNestedValue(obj, path) {
 
 function renderHistoricalMatrix() {
     const tableEl = document.getElementById("historicalMatrixBody");
+    const headerEl = document.getElementById("historicalMatrixHeader");
     if (!tableEl) return;
 
-    const quarters = ["2024/Q2", "2024/Q3", "2024/Q4", "2025/Q1", "2025/Q2", "2025/Q3", "2025/Q4", "2026/Q1"];
+    const allQuarters = BIST_STOCKS[0].historical8Q.map(h => h.quarter);
+
+    if (headerEl) {
+        headerEl.innerHTML = `
+            <tr>
+                <th style="min-width: 140px;">Hisse Kodu</th>
+                ${allQuarters.map(q => `<th style="text-align: center; min-width: 75px;">${q}</th>`).join('')}
+                <th style="min-width: 120px;">${allQuarters.length}-Çeyreklik Trend</th>
+            </tr>
+        `;
+    }
 
     tableEl.innerHTML = BIST_STOCKS.map(stock => {
         const qData = stock.historical8Q;
-        const qFirst = qData[0][matrixMetric] || qData[0]["roic"];
-        const qLast = qData[qData.length - 1][matrixMetric] || qData[qData.length - 1]["roic"];
+        const getItemVal = (item) => {
+            if (!item) return 0;
+            if (matrixMetric === "eva") return parseFloat((item.roic - item.wacc).toFixed(1));
+            return item[matrixMetric] || item["roic"];
+        };
+
+        const qFirst = getItemVal(qData[0]);
+        const qLast = getItemVal(qData[qData.length - 1]);
         const delta = (qLast - qFirst).toFixed(1);
         const deltaClass = delta >= 0 ? "trend-up" : "trend-down";
 
-        const qCells = quarters.map(q => {
+        const qCells = allQuarters.map(q => {
             const item = qData.find(d => d.quarter === q);
-            const val = item ? (item[matrixMetric] || item["roic"]) : 0;
+            const val = getItemVal(item);
             let bgClass = "heatmap-cyan";
+
             if (matrixMetric === "roic" || matrixMetric === "roe") {
                 bgClass = val >= 38 ? "heatmap-emerald-dark" : (val >= 30 ? "heatmap-emerald" : (val >= 20 ? "heatmap-cyan" : "heatmap-amber"));
+            } else if (matrixMetric === "eva") {
+                bgClass = val >= 15 ? "heatmap-emerald-dark" : (val >= 10 ? "heatmap-emerald" : (val >= 5 ? "heatmap-cyan" : (val >= 0 ? "heatmap-amber" : "heatmap-rose")));
             } else {
                 bgClass = "heatmap-cyan";
             }
-            return `<td class="heatmap-cell ${bgClass}">%${val}</td>`;
+            const prefix = (matrixMetric === "eva" && val > 0) ? "+" : "";
+            return `<td class="heatmap-cell ${bgClass}">${prefix}%${val}</td>`;
         }).join("");
 
         return `
@@ -753,10 +774,12 @@ function setMatrixMetric(metric) {
     const btnRoic = document.getElementById("btnMatrixRoic");
     const btnRoe = document.getElementById("btnMatrixRoe");
     const btnWacc = document.getElementById("btnMatrixWacc");
+    const btnEva = document.getElementById("btnMatrixEva");
 
     if (btnRoic) btnRoic.classList.toggle("active", metric === "roic");
     if (btnRoe) btnRoe.classList.toggle("active", metric === "roe");
     if (btnWacc) btnWacc.classList.toggle("active", metric === "wacc");
+    if (btnEva) btnEva.classList.toggle("active", metric === "eva");
 
     renderHistoricalMatrix();
 }
@@ -767,7 +790,8 @@ function renderComparisonChart() {
     if (compareChartInstance) compareChartInstance.destroy();
 
     const selectedCodes = ["EGEEN", "CLEBI", "FROTO", "ISMEN", "LKMNH"];
-    const quarters = ["2024/Q2", "2024/Q3", "2024/Q4", "2025/Q1", "2025/Q2", "2025/Q3", "2025/Q4", "2026/Q1"];
+    const stockRef = BIST_STOCKS.find(s => s.code === "EGEEN") || BIST_STOCKS[0];
+    const quarters = stockRef.historical8Q.map(h => h.quarter);
     const colors = ["#0284c7", "#4f46e5", "#10b981", "#d97706", "#9333ea"];
     const textThemeColor = currentTheme === "dark" ? "#f8fafc" : "#0f172a";
 

@@ -394,15 +394,15 @@
             </div>
         </section>
 
-        <!-- TAB 6: Historical 8-Quarter Heatmap Matrix -->
+        <!-- TAB 6: Historical 20-Quarter Heatmap Matrix -->
         <section class="tab-pane" id="historicalMatrix">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
                 <div>
                     <h3 style="font-family: var(--font-heading); font-size: 1.2rem; color: var(--text-primary);">
-                        Tarihsel 8 Çeyreklik Performans Isı Haritası (2024/Q2 - 2026/Q1)
+                        📜 Tarihsel 20 Çeyreklik Performans Isı Haritası & Trend Takibi (2021/Q2 - 2026/Q1)
                     </h3>
                     <p style="color: var(--text-secondary); font-size: 0.88rem;">
-                        Şirketlerin 8 çeyreklik verimlilik ivmesini yeşil/sarı/kırmızı ısı tonlarıyla takip edin.
+                        14 BIST şirketinizin son 5 yıldaki 20 çeyreklik verimlilik ivmesini yeşil/sarı/kırmızı ısı tonlarıyla takip edin. Yeni çeyrekler açıklandıkça otomatik eklenir.
                     </p>
                 </div>
 
@@ -410,27 +410,17 @@
                     <button class="tab-btn active" id="btnMatrixRoic" onclick="setMatrixMetric('roic')">ROIC Matrisi</button>
                     <button class="tab-btn" id="btnMatrixRoe" onclick="setMatrixMetric('roe')">ROE Matrisi</button>
                     <button class="tab-btn" id="btnMatrixWacc" onclick="setMatrixMetric('wacc')">WACC Matrisi</button>
+                    <button class="tab-btn" id="btnMatrixEva" onclick="setMatrixMetric('eva')">EVA Katma Değer Matrisi</button>
                 </div>
             </div>
 
             <div class="table-wrapper">
-                <table class="custom-table">
-                    <thead>
-                        <tr>
-                            <th>Hisse Kodu</th>
-                            <th style="text-align: center;">2024/Q2</th>
-                            <th style="text-align: center;">2024/Q3</th>
-                            <th style="text-align: center;">2024/Q4</th>
-                            <th style="text-align: center;">2025/Q1</th>
-                            <th style="text-align: center;">2025/Q2</th>
-                            <th style="text-align: center;">2025/Q3</th>
-                            <th style="text-align: center;">2025/Q4</th>
-                            <th style="text-align: center;">2026/Q1</th>
-                            <th>8-Çeyreklik Değişim</th>
-                        </tr>
+                <table class="custom-table" style="white-space: nowrap;">
+                    <thead id="historicalMatrixHeader">
+                        <!-- Dynamic 20 Quarters Header Rendered by app.js -->
                     </thead>
                     <tbody id="historicalMatrixBody">
-                        <!-- Rendered dynamically -->
+                        <!-- Rendered dynamically by app.js -->
                     </tbody>
                 </table>
             </div>
