@@ -850,16 +850,59 @@ function exportToCSV() {
 
 function renderKapFeed() {
     const feedContainer = document.getElementById("kapFeedGrid");
+    const stockFilter = document.getElementById("kapStockFilter") ? document.getElementById("kapStockFilter").value : "ALL";
+    const sentimentFilter = document.getElementById("kapSentimentFilter") ? document.getElementById("kapSentimentFilter").value : "ALL";
+    const searchQuery = document.getElementById("kapSearchInput") ? document.getElementById("kapSearchInput").value.trim().toLowerCase() : "";
+    const countBadge = document.getElementById("kapCountBadge");
+
     if (!feedContainer) return;
 
     let allDisclosures = [];
     BIST_STOCKS.forEach(stock => {
-        stock.kapDisclosures.forEach(disc => {
-            allDisclosures.push({ ...disc, stockCode: stock.code, stockName: stock.name });
-        });
+        if (stock.kapDisclosures) {
+            stock.kapDisclosures.forEach(disc => {
+                allDisclosures.push({ ...disc, stockCode: stock.code, stockName: stock.name });
+            });
+        }
     });
 
+    // 1. Stock Filter
+    if (stockFilter && stockFilter !== "ALL") {
+        allDisclosures = allDisclosures.filter(d => d.stockCode === stockFilter);
+    }
+
+    // 2. Sentiment Filter
+    if (sentimentFilter && sentimentFilter !== "ALL") {
+        allDisclosures = allDisclosures.filter(d => d.sentiment === sentimentFilter);
+    }
+
+    // 3. Search Query Filter
+    if (searchQuery) {
+        allDisclosures = allDisclosures.filter(d => {
+            const text = (d.title + " " + d.summary + " " + (d.positiveImpact || "") + " " + (d.negativeImpact || "") + " " + d.stockCode + " " + d.category).toLowerCase();
+            return text.includes(searchQuery);
+        });
+    }
+
+    // Sort newest date first
     allDisclosures.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    // Update Counter Badge
+    if (countBadge) {
+        countBadge.innerHTML = `📂 Toplam <strong>${allDisclosures.length}</strong> Arşivlenmiş KAP İkazı`;
+    }
+
+    if (allDisclosures.length === 0) {
+        feedContainer.innerHTML = `
+            <div style="grid-column: 1 / -1; text-align: center; padding: 40px; background: var(--bg-card); border: 1px dashed var(--border-color); border-radius: var(--radius-lg); color: var(--text-muted);">
+                <i data-lucide="search-x" style="width: 42px; height: 42px; margin-bottom: 12px; opacity: 0.5;"></i>
+                <div style="font-weight: 700; font-size: 1.1rem; margin-bottom: 4px;">Aradığınız Kriterlere Uygun KAP İkazı Bulunamadı</div>
+                <div style="font-size: 0.88rem;">Filtreleri sıfırlayarak tüm 14 hissenin tarihsel KAP arşivine göz atabilirsiniz.</div>
+            </div>
+        `;
+        initLucideIcons();
+        return;
+    }
 
     feedContainer.innerHTML = allDisclosures.map(disc => {
         const sentimentClass = disc.sentiment === "positive" ? "badge-emerald" : "badge-amber";
@@ -877,11 +920,11 @@ function renderKapFeed() {
 
                     <!-- Highlighted Positive and Negative Sides -->
                     <div style="background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10b981; padding: 8px 12px; border-radius: 4px; margin-bottom: 8px; font-size: 0.84rem; line-height: 1.4;">
-                        <strong style="color: #10b981;">🟢 Olumlu Tarafı:</strong> ${disc.positiveImpact}
+                        <strong style="color: #10b981;">🟢 Olumlu Tarafı:</strong> ${disc.positiveImpact || ''}
                     </div>
 
                     <div style="background: rgba(239, 68, 68, 0.08); border-left: 3px solid #ef4444; padding: 8px 12px; border-radius: 4px; margin-bottom: 12px; font-size: 0.84rem; line-height: 1.4;">
-                        <strong style="color: #ef4444;">🔴 Olumsuz Yön / Risk:</strong> ${disc.negativeImpact}
+                        <strong style="color: #ef4444;">🔴 Olumsuz Yön / Risk:</strong> ${disc.negativeImpact || ''}
                     </div>
                 </div>
                 <div>
@@ -894,7 +937,7 @@ function renderKapFeed() {
                             <i data-lucide="zap"></i> ROE / ROIC / WACC Etkisi:
                         </div>
                         <div style="font-weight: 700; font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-primary);">
-                            ${disc.financialImpactTag}
+                            ${disc.financialImpactTag || ''}
                         </div>
                     </div>
                 </div>

@@ -445,15 +445,60 @@
             </div>
         </section>
 
-        <!-- TAB 8: KAP Feed -->
+        <!-- TAB 8: KAP Feed & Archive -->
         <section class="tab-pane" id="kapFeed">
-            <div style="margin-bottom: 20px;">
-                <h3 style="font-family: var(--font-heading); color: var(--text-primary); font-size: 1.2rem; margin-bottom: 6px;">
-                    Kamu Aydınlatma Platformu & Faaliyet Raporu İkaz Akışı (Canlı Yayın)
-                </h3>
-                <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                    Yapay Zeka tarafından değerlendirilen KAP açıklamaları ve faaliyet raporu özetleri.
-                </p>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 16px;">
+                <div>
+                    <h3 style="font-family: var(--font-heading); color: var(--text-primary); font-size: 1.25rem; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                        🔔 KAP İkazları & Birikimli Tarihsel Haber Arşivi
+                    </h3>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                        Tüm KAP açıklamaları silinmeden biriktirilir. Hisse seçimi, sinyal filtresi veya kelime araması ile geçmiş haberleri filtreleyin.
+                    </p>
+                </div>
+                <div>
+                    <span class="badge-highlight badge-cyan" id="kapCountBadge" style="font-size: 0.88rem; padding: 6px 14px;">
+                        📂 Toplam 0 Arşivlenmiş KAP İkazı
+                    </span>
+                </div>
+            </div>
+
+            <!-- KAP Filtering Controls Toolbar -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 16px 20px; border-radius: var(--radius-lg); margin-bottom: 24px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; box-shadow: var(--shadow-glow);">
+                <div>
+                    <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Hisseye Göre Filtrele:</label>
+                    <select class="select-custom" id="kapStockFilter" onchange="renderKapFeed()">
+                        <option value="ALL">Tüm Hisseler (14 Şirket)</option>
+                        <option value="EGEEN">EGEEN - Ege Endüstri</option>
+                        <option value="CLEBI">CLEBI - Çelebi Hava</option>
+                        <option value="FROTO">FROTO - Ford Otomotiv</option>
+                        <option value="BRSAN">BRSAN - Borusan Boru</option>
+                        <option value="CCOLA">CCOLA - Coca-Cola İçecek</option>
+                        <option value="OTKAR">OTKAR - Otokar</option>
+                        <option value="ISMEN">ISMEN - İş Yatırım</option>
+                        <option value="PGSUS">PGSUS - Pegasus</option>
+                        <option value="ANSGR">ANSGR - Anadolu Sigorta</option>
+                        <option value="LOGO">LOGO - Logo Yazılım</option>
+                        <option value="LKMNH">LKMNH - Lokman Hekim</option>
+                        <option value="ALKA">ALKA - Alkim Kağıt</option>
+                        <option value="SODSN">SODSN - Sodaş Sodyum</option>
+                        <option value="ALTNY">ALTNY - Altınay Savunma</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Sinyal Türü:</label>
+                    <select class="select-custom" id="kapSentimentFilter" onchange="renderKapFeed()">
+                        <option value="ALL">Tüm Sinyaller & Kategoriler</option>
+                        <option value="positive">🟢 Sadece Pozitif Sinyaller</option>
+                        <option value="warning">⚠️ Sadece Risk & Uyarılar</option>
+                    </select>
+                </div>
+
+                <div style="flex: 1; min-width: 220px;">
+                    <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Haber İçi Arama:</label>
+                    <input type="text" class="portfolio-input" id="kapSearchInput" placeholder="Örn: ihale, sözleşme, Daimler, zırhlı, GES..." style="width: 100%; text-align: left; padding: 8px 14px;" oninput="renderKapFeed()">
+                </div>
             </div>
 
             <div class="kap-feed-grid" id="kapFeedGrid">
