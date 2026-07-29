@@ -1135,75 +1135,26 @@ function manualRefreshKapFeed() {
     if (spinnerHeader) spinnerHeader.classList.add("spin-icon");
     if (spinnerTab) spinnerTab.classList.add("spin-icon");
 
-    showToast("🔄 BIST KAP & Fiyat Akışı Taranıyor...", "info");
+    showToast("🔄 BIST Fiyatları & KAP Akışı Taranıyor...", "info");
 
     fetchLiveBistPrices();
 
     setTimeout(() => {
-        const now = new Date();
-        const timeStr = now.toISOString().replace("T", " ").substring(0, 16);
-        const randomStock = BIST_STOCKS[Math.floor(Math.random() * BIST_STOCKS.length)];
-        
-        const newKapItem = {
-            id: `KAP-${randomStock.code}-${Date.now().toString().slice(-4)}`,
-            date: timeStr,
-            category: "Canlı BİST Açıklaması",
-            title: `${randomStock.code} 2026/Q2 Özel Durum Açıklaması & Yeni Üretim Hattı Kararı`,
-            summary: `Yapay Zeka botu tarafından saat ${now.toLocaleTimeString('tr-TR')} itibarıyla taranan KAP bildirimine göre üretim hattı kapasitesi artırılıyor.`,
-            positiveImpact: `Üretim kapasitesinde +%12 doğrudan artış ve yıllık NOPAT katkısı.`,
-            negativeImpact: `Kısa vadeli işletme sermayesi nakit ihtiyacı.`,
-            financialImpactTag: `⚡ ROIC Katkısı: +%1.4 | ROE Katkısı: +%1.8 | Canlı Taranma: ${timeStr}`,
-            sentiment: "positive",
-            impactScore: 9
-        };
-
-        if (randomStock.kapDisclosures) {
-            randomStock.kapDisclosures.unshift(newKapItem);
-        }
-
         renderKapFeed();
 
         if (spinnerHeader) spinnerHeader.classList.remove("spin-icon");
         if (spinnerTab) spinnerTab.classList.remove("spin-icon");
 
-        showToast(`⚡ ${randomStock.code} için 1 Yeni Canlı KAP Bildirimi Alındı ve İhlaller Güncellendi!`, "success");
-    }, 1500);
+        showToast("⚡ BIST Canlı Fiyatları & KAP Akışı Başarıyla Güncellendi!", "success");
+    }, 1000);
 }
 
 function startAutomaticLiveEngine() {
+    // Initial live fetch
     fetchLiveBistPrices();
 
+    // Silent background live price update every 60 seconds (No popup spam)
     setInterval(() => {
         fetchLiveBistPrices();
-    }, 45000);
-
-    setInterval(() => {
-        autoScanKapDisclosures();
     }, 60000);
-}
-
-function autoScanKapDisclosures() {
-    const now = new Date();
-    const timeStr = now.toISOString().replace("T", " ").substring(0, 16);
-    const randomStock = BIST_STOCKS[Math.floor(Math.random() * BIST_STOCKS.length)];
-
-    const autoKapItem = {
-        id: `KAP-${randomStock.code}-${Date.now().toString().slice(-4)}`,
-        date: timeStr,
-        category: "Otomatik BİST Canlı İkazı",
-        title: `${randomStock.code} 2026/Q2 Özel Durum & Otomatik Canlı Bilanço İkazı`,
-        summary: `Yapay Zeka botu tarafından saat ${now.toLocaleTimeString('tr-TR')} itibarıyla taranan KAP bildirimine göre üretim ve sipariş verileri güncellendi.`,
-        positiveImpact: `Otomatik veri akışı ile NOPAT ve verimlilik ivmesi teyit edildi.`,
-        negativeImpact: `Dönemsel hammadde ve işletme sermayesi takibi.`,
-        financialImpactTag: `⚡ ROIC Katkısı: +%1.6 | ROE Katkısı: +%2.1 | Otomatik Tarama: ${timeStr}`,
-        sentiment: "positive",
-        impactScore: 9
-    };
-
-    if (randomStock.kapDisclosures) {
-        randomStock.kapDisclosures.unshift(autoKapItem);
-    }
-
-    renderKapFeed();
-    showToast(`🤖 Otomatik Canlı Akış: ${randomStock.code} için yeni haber algılandı!`, "info");
 }
