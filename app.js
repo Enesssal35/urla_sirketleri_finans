@@ -1218,7 +1218,7 @@ async function manualRefreshKapFeed() {
         if (changedCount > 0) {
             showToast(`⚡ ${changedCount} Şirkette Fiyat Değişimi Algılandı! Verileriniz Güncellendi (${nowStr}).`, "success");
         } else {
-            showToast(`ℹ️ Fiyatlarda veya KAP Akışında Yeni Bir Değişim Bulunmadı (${nowStr}). Verileriniz En Güncel Halindedir.`, "info");
+            showToast(`ℹ️ Fiyatlarda veya KAP Akışında Yeni Bir Değişim Bulunmadı (${nowStr}). Raporu Görmek İçin Tıklayın!`, "info");
         }
     } catch (e) {
         console.error("Sync error:", e);
@@ -1227,6 +1227,37 @@ async function manualRefreshKapFeed() {
         if (spinnerTab) spinnerTab.classList.remove("spin-icon");
         initLucideIcons();
     }
+}
+
+function openSyncAuditModal() {
+    const modal = document.getElementById("syncAuditModal");
+    const auditTime = document.getElementById("auditTimestampText");
+    const auditStatus = document.getElementById("auditMarketStatus");
+
+    if (auditTime) {
+        auditTime.innerText = `Son Kontrol: ${new Date().toLocaleString('tr-TR')}`;
+    }
+
+    const currentHour = new Date().getHours();
+    const isMarketOpen = currentHour >= 10 && currentHour < 18;
+
+    if (auditStatus) {
+        if (isMarketOpen) {
+            auditStatus.innerText = "🟢 BIST Canlı Seans Açık (Fiyatlar Anlık Değişiyor)";
+            auditStatus.style.color = "var(--accent-success)";
+        } else {
+            auditStatus.innerText = "🔴 Gece / Seans Dışı (BIST Fiyatları ve KAP Sabit)";
+            auditStatus.style.color = "var(--accent-warning)";
+        }
+    }
+
+    if (modal) modal.classList.add("active");
+    initLucideIcons();
+}
+
+function closeSyncAuditModal() {
+    const modal = document.getElementById("syncAuditModal");
+    if (modal) modal.classList.remove("active");
 }
 
 function startAutomaticLiveEngine() {
