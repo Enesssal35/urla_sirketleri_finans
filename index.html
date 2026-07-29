@@ -47,6 +47,10 @@
                     <i data-lucide="moon"></i> Koyu Moda Geç
                 </button>
 
+                <button class="btn-primary" onclick="manualRefreshKapFeed()" style="background: linear-gradient(135deg, #0284c7, #4f46e5); border: none; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3);">
+                    <i data-lucide="refresh-cw" id="headerKapSpinner"></i> Canlı KAP & Fiyat Yenile
+                </button>
+
                 <button class="btn-secondary" onclick="exportToCSV()">
                     <i data-lucide="download"></i> Excel / CSV İndir
                 </button>
@@ -499,6 +503,12 @@
                     <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Haber İçi Arama:</label>
                     <input type="text" class="portfolio-input" id="kapSearchInput" placeholder="Örn: ihale, sözleşme, Daimler, zırhlı, GES..." style="width: 100%; text-align: left; padding: 8px 14px;" oninput="renderKapFeed()">
                 </div>
+
+                <div style="display: flex; align-items: flex-end;">
+                    <button class="btn-primary" id="btnManualKapSync" onclick="manualRefreshKapFeed()" style="padding: 9px 18px; border-radius: var(--radius-md); box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4); white-space: nowrap;">
+                        <i data-lucide="refresh-cw" id="kapSyncSpinner"></i> Manuel KAP Yenile
+                    </button>
+                </div>
             </div>
 
             <div class="kap-feed-grid" id="kapFeedGrid">
@@ -646,6 +656,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Toast Notification Container -->
+    <div class="toast-container" id="toastContainer"></div>
 
     <!-- Flexible Script Loading: Supports both root and subfolder structures! -->
     <script src="data.js" onerror="this.onerror=null;this.src='js/data.js';"></script>
