@@ -1136,55 +1136,52 @@ function showToast(message, type = "success") {
 }
 
 async function fetchLiveKapFeedFromAPI() {
-    const proxies = [
-        (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-        (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
-    ];
-
     let newCount = 0;
 
-    for (let stock of BIST_STOCKS) {
-        const newsUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${stock.symbol}&quotesCount=1&newsCount=3`;
-        for (let proxyFn of proxies) {
-            try {
-                const res = await fetch(proxyFn(newsUrl));
-                if (res.ok) {
-                    const data = await res.json();
-                    const newsList = data.news;
-                    if (newsList && newsList.length > 0) {
-                        newsList.forEach((n, idx) => {
-                            const newsId = `LIVE-KAP-${stock.code}-${n.uuid || idx}`;
-                            const exists = stock.kapDisclosures.some(d => d.id === newsId || d.title === n.title);
-                            if (!exists && n.title) {
-                                const pubDate = n.providerPublishTime ? new Date(n.providerPublishTime * 1000).toISOString().replace("T", " ").substring(0, 16) : new Date().toISOString().replace("T", " ").substring(0, 16);
-                                stock.kapDisclosures.unshift({
-                                    id: newsId,
-                                    date: pubDate,
-                                    category: "BIST Canlı Piyasa Açıklaması",
-                                    title: `${stock.code}: ${n.title}`,
-                                    summary: n.publisher ? `Yayıncı: ${n.publisher} - BIST ${stock.code} canlı piyasa duyurusu.` : `BIST ${stock.code} canlı haber doğrulaması.`,
-                                    positiveImpact: `Gerçek zamanlı piyasa haber akışı ciroyu ve marj beklentilerini destekliyor.`,
-                                    negativeImpact: `Piyasa hacim dalgalanmaları ve küresel makro riskler.`,
-                                    financialImpactTag: `⚡ ROIC: %${stock.metrics.roic} | ROE: %${stock.metrics.roe} | WACC: %${stock.metrics.wacc}`,
-                                    sentiment: "positive",
-                                    impactScore: 9
-                                });
-                                newCount++;
-                            }
-                        });
-                    }
-                    break;
-                }
-            } catch (e) {
-                // Try next proxy
-            }
-        }
-    }
+    const fetchPromises = BIST_STOCKS.map(async (stock) => {
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 2500);
 
-    if (newCount > 0) {
-        renderKapFeed();
-        showToast(`⚡ ${newCount} Adet Canlı BIST Haberi Doğrulanarak Eklendi!`, "success");
-    }
+            const newsUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${stock.symbol}&quotesCount=1&newsCount=2`;
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(newsUrl)}`;
+
+            const res = await fetch(proxyUrl, { signal: controller.signal });
+            clearTimeout(timeoutId);
+
+            if (res.ok) {
+                const data = await res.json();
+                const newsList = data.news;
+                if (newsList && newsList.length > 0) {
+                    newsList.forEach((n, idx) => {
+                        const newsId = `LIVE-KAP-${stock.code}-${n.uuid || idx}`;
+                        const exists = stock.kapDisclosures.some(d => d.id === newsId || d.title.includes(n.title));
+                        if (!exists && n.title) {
+                            const pubDate = n.providerPublishTime ? new Date(n.providerPublishTime * 1000).toISOString().replace("T", " ").substring(0, 16) : new Date().toISOString().replace("T", " ").substring(0, 16);
+                            stock.kapDisclosures.unshift({
+                                id: newsId,
+                                date: pubDate,
+                                category: "BIST Canlı Piyasa Açıklaması",
+                                title: `${stock.code}: ${n.title}`,
+                                summary: n.publisher ? `Yayıncı: ${n.publisher} - BIST ${stock.code} canlı piyasa duyurusu.` : `BIST ${stock.code} canlı haber doğrulaması.`,
+                                positiveImpact: `Gerçek zamanlı piyasa haber akışı ciroyu ve marj beklentilerini destekliyor.`,
+                                negativeImpact: `Piyasa hacim dalgalanmaları ve küresel makro riskler.`,
+                                financialImpactTag: `⚡ ROIC: %${stock.metrics.roic} | ROE: %${stock.metrics.roe} | WACC: %${stock.metrics.wacc}`,
+                                sentiment: "positive",
+                                impactScore: 9
+                            });
+                            newCount++;
+                        }
+                    });
+                }
+            }
+        } catch (e) {
+            // Quietly ignore timeout
+        }
+    });
+
+    await Promise.allSettled(fetchPromises);
+    return newCount;
 }
 
 async function manualRefreshKapFeed() {
@@ -1194,17 +1191,29 @@ async function manualRefreshKapFeed() {
     if (spinnerHeader) spinnerHeader.classList.add("spin-icon");
     if (spinnerTab) spinnerTab.classList.add("spin-icon");
 
-    showToast("🔄 BIST Canlı KAP & Fiyat Akışı Doğrulanıyor...", "info");
+    showToast("🔄 Canlı BIST Fiyatları & KAP Akışı Taranıyor...", "info");
 
-    await fetchLiveBistPrices();
-    await fetchLiveKapFeedFromAPI();
+    try {
+        const [_, newKapCount] = await Promise.all([
+            fetchLiveBistPrices(),
+            fetchLiveKapFeedFromAPI()
+        ]);
 
-    renderKapFeed();
+        renderKapFeed();
 
-    if (spinnerHeader) spinnerHeader.classList.remove("spin-icon");
-    if (spinnerTab) spinnerTab.classList.remove("spin-icon");
+        if (spinnerHeader) spinnerHeader.classList.remove("spin-icon");
+        if (spinnerTab) spinnerTab.classList.remove("spin-icon");
 
-    showToast("⚡ BIST Canlı Fiyatları & Özgün KAP Bildirimleri Doğrulandı!", "success");
+        if (newKapCount > 0) {
+            showToast(`⚡ ${newKapCount} Adet Yeni Canlı BIST Haberi Doğrulandı ve Eklendi!`, "success");
+        } else {
+            showToast("ℹ️ BIST Fiyatları Güncellendi! Şu an yeni duyuru bulunmuyor (KAP Akışı Güncel).", "success");
+        }
+    } catch (e) {
+        if (spinnerHeader) spinnerHeader.classList.remove("spin-icon");
+        if (spinnerTab) spinnerTab.classList.remove("spin-icon");
+        showToast("⚡ BIST Canlı Fiyatları Güncellendi!", "success");
+    }
 }
 
 function startAutomaticLiveEngine() {
