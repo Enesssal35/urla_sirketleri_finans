@@ -1191,10 +1191,19 @@ async function manualRefreshKapFeed() {
     if (spinnerHeader) spinnerHeader.classList.add("spin-icon");
     if (spinnerTab) spinnerTab.classList.add("spin-icon");
 
-    showToast("🔄 Tüm BIST Fiyatları, Rasyolar & KAP Akışı Güncelleniyor...", "info");
+    showToast("🔄 BIST Canlı Fiyatları & KAP Akışı Kontrol Ediliyor...", "info");
 
     try {
+        const initialPrices = BIST_STOCKS.map(s => s.price);
+
         await fetchLiveBistPrices();
+
+        const finalPrices = BIST_STOCKS.map(s => s.price);
+        let changedCount = 0;
+        initialPrices.forEach((p, idx) => {
+            if (p !== finalPrices[idx]) changedCount++;
+        });
+
         renderCustomTickerTape();
         renderOverviewMetrics();
         renderFinancialTable();
@@ -1203,14 +1212,20 @@ async function manualRefreshKapFeed() {
         renderKapFeed();
         renderMagicFormulaTable();
         renderPortfolioTable();
+
+        const nowStr = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+        if (changedCount > 0) {
+            showToast(`⚡ ${changedCount} Şirkette Fiyat Değişimi Algılandı! Verileriniz Güncellendi (${nowStr}).`, "success");
+        } else {
+            showToast(`ℹ️ Fiyatlarda veya KAP Akışında Yeni Bir Değişim Bulunmadı (${nowStr}). Verileriniz En Güncel Halindedir.`, "info");
+        }
     } catch (e) {
         console.error("Sync error:", e);
     } finally {
-        // GUARANTEED: Always stop spinning, no matter what!
         if (spinnerHeader) spinnerHeader.classList.remove("spin-icon");
         if (spinnerTab) spinnerTab.classList.remove("spin-icon");
         initLucideIcons();
-        showToast("⚡ Tüm 14 Şirketin BIST Fiyatları, Rasyoları ve KAP Analizleri Güncellendi!", "success");
     }
 }
 
