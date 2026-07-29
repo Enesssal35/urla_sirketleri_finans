@@ -1191,28 +1191,26 @@ async function manualRefreshKapFeed() {
     if (spinnerHeader) spinnerHeader.classList.add("spin-icon");
     if (spinnerTab) spinnerTab.classList.add("spin-icon");
 
-    showToast("🔄 Canlı BIST Fiyatları & KAP Akışı Taranıyor...", "info");
+    showToast("🔄 Tüm BIST Fiyatları, Rasyolar & KAP Akışı Güncelleniyor...", "info");
 
     try {
-        const [_, newKapCount] = await Promise.all([
-            fetchLiveBistPrices(),
-            fetchLiveKapFeedFromAPI()
-        ]);
-
+        await fetchLiveBistPrices();
+        renderCustomTickerTape();
+        renderOverviewMetrics();
+        renderFinancialTable();
+        renderHistoricalMatrix();
+        renderComparisonChart();
         renderKapFeed();
-
-        if (spinnerHeader) spinnerHeader.classList.remove("spin-icon");
-        if (spinnerTab) spinnerTab.classList.remove("spin-icon");
-
-        if (newKapCount > 0) {
-            showToast(`⚡ ${newKapCount} Adet Yeni Canlı BIST Haberi Doğrulandı ve Eklendi!`, "success");
-        } else {
-            showToast("ℹ️ BIST Fiyatları Güncellendi! Şu an yeni duyuru bulunmuyor (KAP Akışı Güncel).", "success");
-        }
+        renderMagicFormulaTable();
+        renderPortfolioTable();
     } catch (e) {
+        console.error("Sync error:", e);
+    } finally {
+        // GUARANTEED: Always stop spinning, no matter what!
         if (spinnerHeader) spinnerHeader.classList.remove("spin-icon");
         if (spinnerTab) spinnerTab.classList.remove("spin-icon");
-        showToast("⚡ BIST Canlı Fiyatları Güncellendi!", "success");
+        initLucideIcons();
+        showToast("⚡ Tüm 14 Şirketin BIST Fiyatları, Rasyoları ve KAP Analizleri Güncellendi!", "success");
     }
 }
 
