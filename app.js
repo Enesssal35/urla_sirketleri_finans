@@ -11,6 +11,9 @@ let technicalChartInstance = null;
 let matrixMetric = "roic";
 let currentTheme = localStorage.getItem("bist_theme") || "light";
 
+// Canlı fiyatlar gelmeden hiçbir statik fiyat gösterilmez — her şey ? olarak başlar
+let livePricesLoaded = false;
+
 // State Data
 let userPortfolio = JSON.parse(localStorage.getItem("bist_user_portfolio")) || {
     "EGEEN": { qty: 5, cost: 5200 },
@@ -146,6 +149,7 @@ async function fetchLiveBistPrices() {
     }
 
     if (updatedCount > 0) {
+        livePricesLoaded = true; // Canlı veriler geldi — artık ? gösterme!
         renderOverviewMetrics();
         renderFinancialTable();
         renderCustomTickerTape();
@@ -304,9 +308,16 @@ function renderCustomTickerTape() {
     const items = [...BIST_STOCKS, ...BIST_STOCKS];
 
     track.innerHTML = items.map(stock => {
+        if (!livePricesLoaded) {
+            return `
+                <div class="ticker-item" style="cursor: pointer;">
+                    <span class="ticker-symbol">${stock.order}. ${stock.code}</span>
+                    <span class="ticker-price" style="color:var(--text-muted)">⏳ Yükleniyor...</span>
+                </div>
+            `;
+        }
         const changeClass = stock.change >= 0 ? "trend-up" : "trend-down";
         const changeSign = stock.change >= 0 ? "+" : "";
-
         return `
             <div class="ticker-item" onclick="openCompanyModal('${stock.code}')" style="cursor: pointer;">
                 <span class="ticker-symbol">${stock.order}. ${stock.code}</span>
@@ -335,7 +346,7 @@ function renderPortfolioTable() {
         const costPrice = holding.cost || 0;
 
         const positionCost = qty * costPrice;
-        const positionValue = qty * stock.price;
+        const positionValue = livePricesLoaded ? qty * stock.price : 0;
         const pnl = positionValue - positionCost;
         const pnlPercent = positionCost > 0 ? ((pnl / positionCost) * 100).toFixed(2) : 0;
         const pnlClass = pnl >= 0 ? "trend-up" : "trend-down";
@@ -350,6 +361,9 @@ function renderPortfolioTable() {
         }
 
         const eva = stock.metrics.roic - stock.metrics.wacc;
+        const livePriceTd = livePricesLoaded
+            ? `<strong>${stock.price.toLocaleString("tr-TR", {minimumFractionDigits: 2})} ₺</strong>`
+            : `<span style="font-size:1.2rem;color:var(--text-muted);font-weight:800">?</span>`;
 
         return `
             <tr>
@@ -358,7 +372,7 @@ function renderPortfolioTable() {
                     <div class="stock-title">${stock.code}</div>
                     <div class="stock-name">${stock.name}</div>
                 </td>
-                <td><strong>${stock.price.toLocaleString("tr-TR", {minimumFractionDigits: 2})} ₺</strong></td>
+                <td>${livePriceTd}</td>
                 <td>
                     <input type="number" class="portfolio-input" value="${qty}" min="0" 
                            onchange="updatePortfolioItem('${stock.code}', 'qty', this.value)">
@@ -681,6 +695,11 @@ function renderFinancialTable() {
         const customBadgesHtml = evaluateCustomRules(stock);
         const valuationRule = getValuationDecisionRule(stock);
 
+        // Canlı fiyat gelmeden ? göster — statik veriyle yanlış bilgi verme!
+        const priceDisplay = livePricesLoaded
+            ? `<strong>${stock.price.toLocaleString("tr-TR", {minimumFractionDigits: 2})} ₺</strong><div class="${changeClass}" style="font-size:0.78rem">${changeSign}%${stock.change}</div>`
+            : `<span style="font-size:1.4rem;color:var(--text-muted);font-weight:800">?</span><div style="font-size:0.72rem;color:var(--text-muted)">Yükleniyor...</div>`;
+
         return `
             <tr>
                 <td><strong>#${stock.order}</strong></td>
@@ -694,10 +713,7 @@ function renderFinancialTable() {
                     </div>
                 </td>
                 <td><span class="badge-highlight badge-cyan">${stock.sector}</span></td>
-                <td>
-                    <strong>${stock.price.toLocaleString("tr-TR", {minimumFractionDigits: 2})} ₺</strong>
-                    <div class="${changeClass}" style="font-size: 0.78rem;">${changeSign}%${stock.change}</div>
-                </td>
+                <td>${priceDisplay}</td>
                 <td>${getRoicBadge(stock.metrics.roic)}</td>
                 <td>${getWaccBadge(stock.metrics.wacc)}</td>
                 <td>${getEvaBadge(stock.metrics.roic, stock.metrics.wacc)}</td>
