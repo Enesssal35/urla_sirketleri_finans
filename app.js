@@ -63,17 +63,50 @@ function initLucideIcons() {
 
 // Automatic Real-Time BIST Live Price Synchronization
 async function fetchLiveBistPrices() {
-    const ALL_SYMBOLS = BIST_STOCKS.map(s => s.symbol).join(',');
+    const TV_SYMBOLS = BIST_STOCKS.map(s => 'BIST:' + s.code);
 
-    // --- Single batch request for all 14 stocks (1 network call!) ---
-    async function fetchBatch() {
-        const batchUrl = `https://query2.finance.yahoo.com/v8/finance/spark?symbols=${ALL_SYMBOLS}&range=1d&interval=5m`;
-        const headers = { 'Accept': 'application/json', 'Referer': 'https://finance.yahoo.com/' };
-        
+    // ── Strateji 1: TradingView Scanner API (Google ile aynı veri kaynağı!) ──
+    async function fetchFromTradingView() {
+        const url = 'https://scanner.tradingview.com/turkey/scan';
+        const body = JSON.stringify({
+            filter: [{ left: 'name', operation: 'in_range', right: BIST_STOCKS.map(s => s.code) }],
+            columns: ['name', 'close', 'change'],
+            range: [0, 20]
+        });
         const ctrl = new AbortController();
         const tid = setTimeout(() => ctrl.abort(), 8000);
         try {
-            const r = await fetch(batchUrl, { headers, signal: ctrl.signal });
+            const r = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Origin': 'https://www.tradingview.com',
+                    'Referer': 'https://www.tradingview.com/'
+                },
+                body,
+                signal: ctrl.signal
+            });
+            clearTimeout(tid);
+            if (!r.ok) return null;
+            const data = await r.json();
+            return data.data || null;
+        } catch (_) {
+            clearTimeout(tid);
+            return null;
+        }
+    }
+
+    // ── Strateji 2: Yahoo Finance batch (yedek) ──
+    async function fetchFromYahoo() {
+        const ALL_SYMBOLS = BIST_STOCKS.map(s => s.symbol).join(',');
+        const batchUrl = `https://query2.finance.yahoo.com/v8/finance/spark?symbols=${ALL_SYMBOLS}&range=1d&interval=5m`;
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 8000);
+        try {
+            const r = await fetch(batchUrl, {
+                headers: { 'Accept': 'application/json', 'Referer': 'https://finance.yahoo.com/' },
+                signal: ctrl.signal
+            });
             clearTimeout(tid);
             if (!r.ok) return null;
             const data = await r.json();
@@ -84,76 +117,51 @@ async function fetchLiveBistPrices() {
         }
     }
 
-    // --- Per-stock fallback using query2 v8/chart ---
-    async function fetchSingle(stock) {
-        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${stock.symbol}?interval=5m&range=1d`;
-        const headers = { 'Accept': 'application/json', 'Referer': 'https://finance.yahoo.com/' };
-        // Try direct, then proxies
-        const attempts = [
-            () => fetch(url, { headers }),
-            () => fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`),
-            () => fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`)
-        ];
-        for (const attempt of attempts) {
-            try {
-                const ctrl = new AbortController();
-                const tid = setTimeout(() => ctrl.abort(), 6000);
-                const r = await attempt();
-                clearTimeout(tid);
-                if (!r.ok) continue;
-                const d = await r.json();
-                const meta = d.chart?.result?.[0]?.meta;
-                if (meta?.regularMarketPrice) {
-                    return { price: meta.regularMarketPrice, prevClose: meta.chartPreviousClose || meta.previousClose };
-                }
-            } catch (_) {}
-        }
-        return null;
-    }
-
     let updatedCount = 0;
 
-    // --- Strategy 1: Try batch first ---
-    const batchResults = await fetchBatch();
-    if (batchResults && batchResults.length > 0) {
-        batchResults.forEach(item => {
-            const sym = item.symbol;
-            const stock = BIST_STOCKS.find(s => s.symbol === sym);
+    // ── TradingView'u önce dene ──
+    const tvData = await fetchFromTradingView();
+    if (tvData && tvData.length > 0) {
+        tvData.forEach(item => {
+            const code = item.d?.[0];
+            const price = item.d?.[1];
+            const change = item.d?.[2];
+            if (!code || !price) return;
+            const stock = BIST_STOCKS.find(s => s.code === code);
             if (!stock) return;
-            const response = item.response?.[0];
-            const meta = response?.meta;
-            if (meta?.regularMarketPrice) {
-                stock.price = parseFloat(meta.regularMarketPrice);
-                const prev = meta.chartPreviousClose || meta.previousClose;
-                if (prev && prev > 0) {
-                    stock.change = parseFloat((((stock.price - prev) / prev) * 100).toFixed(2));
-                }
-                updatedCount++;
-            }
+            stock.price = parseFloat(price);
+            stock.change = change !== null ? parseFloat(change.toFixed(2)) : 0;
+            updatedCount++;
         });
     }
 
-    // --- Strategy 2: For any stock not updated by batch, try per-stock ---
+    // ── Eksik hisseler için Yahoo'ya dön ──
     if (updatedCount < BIST_STOCKS.length) {
-        const missing = BIST_STOCKS.filter(s => !batchResults?.find(r => r.symbol === s.symbol && r.response?.[0]?.meta?.regularMarketPrice));
-        await Promise.allSettled(missing.map(async (stock) => {
-            const result = await fetchSingle(stock);
-            if (result) {
-                stock.price = parseFloat(result.price);
-                if (result.prevClose && result.prevClose > 0) {
-                    stock.change = parseFloat((((stock.price - result.prevClose) / result.prevClose) * 100).toFixed(2));
+        const yahooData = await fetchFromYahoo();
+        if (yahooData) {
+            yahooData.forEach(item => {
+                const sym = item.symbol;
+                const stock = BIST_STOCKS.find(s => s.symbol === sym);
+                if (!stock || stock.price !== BIST_STOCKS.find(s => s.symbol === sym)?.price) return;
+                const meta = item.response?.[0]?.meta;
+                if (meta?.regularMarketPrice) {
+                    stock.price = parseFloat(meta.regularMarketPrice);
+                    const prev = meta.chartPreviousClose || meta.previousClose;
+                    if (prev && prev > 0) {
+                        stock.change = parseFloat((((stock.price - prev) / prev) * 100).toFixed(2));
+                    }
+                    updatedCount++;
                 }
-                updatedCount++;
-            }
-        }));
+            });
+        }
     }
 
     if (updatedCount > 0) {
-        livePricesLoaded = true; // Canlı veriler geldi — artık ? gösterme!
+        livePricesLoaded = true;
         renderOverviewMetrics();
         renderFinancialTable();
         renderCustomTickerTape();
-        if (activeTab === "portfolioPane") renderPortfolioTable();
+        if (activeTab === 'portfolioPane') renderPortfolioTable();
     }
 
     return updatedCount;
