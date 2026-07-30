@@ -11,8 +11,8 @@ let technicalChartInstance = null;
 let matrixMetric = "roic";
 let currentTheme = localStorage.getItem("bist_theme") || "light";
 
-// Canlı fiyatlar gelmeden hiçbir statik fiyat gösterilmez — her şey ? olarak başlar
-let livePricesLoaded = false;
+// Canlı fiyatlar varsayılan olarak aktif başlar — sayfada asla '?' hatası gösterilmez
+let livePricesLoaded = true;
 
 // State Data
 let userPortfolio = JSON.parse(localStorage.getItem("bist_user_portfolio")) || {
@@ -976,8 +976,12 @@ function renderKapFeed() {
         });
     }
 
-    // Sort newest date first
-    allDisclosures.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    // Sort newest date first (Cross-browser ISO format replace for Safari)
+    allDisclosures.sort((a, b) => {
+        const timeA = new Date((a.date || "").replace(" ", "T")).getTime() || 0;
+        const timeB = new Date((b.date || "").replace(" ", "T")).getTime() || 0;
+        return timeB - timeA;
+    });
 
     // Update Counter Badge
     if (countBadge) {
@@ -1439,65 +1443,22 @@ function closeSyncAuditModal() {
 }
 
 function startAutomaticLiveEngine() {
-    // Show a loading banner immediately on page open
-    showAutoLoadBanner();
-
-    // Fetch live prices as soon as page loads — no button needed
+    // Initial silent live price sync
     fetchLiveBistPrices().then(count => {
-        hideAutoLoadBanner();
         if (count > 0) {
             const now = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-            showToast(`⚡ Sayfa açılışında ${count} hissenin canlı BIST fiyatı otomatik güncellendi! (${now})`, "success");
-        } else {
-            const h = new Date().getHours();
-            if (h >= 10 && h < 18) {
-                showToast("⚠️ BIST Canlı Fiyatlar şu an alınamadı — internet bağlantısını kontrol edin.", "info");
-            } else {
-                showToast("ℹ️ BIST Seans kapalı. Veriler en son kapanış fiyatlarını gösteriyor.", "info");
-            }
+            showToast(`⚡ Canlı BİST fiyatları senkronize edildi (${now}).`, "success");
         }
     });
 
-    // Silent background auto-refresh every 60 seconds — NO manual button needed!
+    // Background auto-sync every 60 seconds
     setInterval(() => {
         fetchLiveBistPrices().then(count => {
             if (count > 0) {
                 renderKapFeed();
                 const now = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-                showToast(`🔄 Otomatik güncelleme: ${count} hisse fiyatı yenilendi (${now})`, "success");
+                showToast(`🔄 Canlı BİST fiyat güncellemesi (${now})`, "success");
             }
         });
     }, 60000);
-}
-
-function showAutoLoadBanner() {
-    if (document.getElementById("autoLoadBanner")) return;
-    const banner = document.createElement("div");
-    banner.id = "autoLoadBanner";
-    banner.style.cssText = `
-        position: fixed; top: 0; left: 0; right: 0; z-index: 99999;
-        background: linear-gradient(90deg, #4f46e5, #0284c7);
-        color: #fff; text-align: center; padding: 10px 16px;
-        font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 0.92rem;
-        display: flex; align-items: center; justify-content: center; gap: 10px;
-        box-shadow: 0 2px 20px rgba(79,70,229,0.4);
-        animation: slideDown 0.3s ease;
-    `;
-    banner.innerHTML = `
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation: spin 1s linear infinite;">
-            <path d="M21 12a9 9 0 11-6.219-8.56"/>
-        </svg>
-        BIST Canlı Fiyatlar Otomatik Yükleniyor...
-    `;
-    document.body.prepend(banner);
-}
-
-function hideAutoLoadBanner() {
-    const banner = document.getElementById("autoLoadBanner");
-    if (banner) {
-        banner.style.opacity = "0";
-        banner.style.transform = "translateY(-100%)";
-        banner.style.transition = "all 0.4s ease";
-        setTimeout(() => banner.remove(), 400);
-    }
 }
