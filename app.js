@@ -60,69 +60,81 @@ function initLucideIcons() {
 
 // Automatic Real-Time BIST Live Price Synchronization
 async function fetchLiveBistPrices() {
-    const PROXIES = [
-        (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-        (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
-        (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
-    ];
+    const ALL_SYMBOLS = BIST_STOCKS.map(s => s.symbol).join(',');
 
-    async function fetchWithTimeout(url, ms = 4000) {
+    // --- Single batch request for all 14 stocks (1 network call!) ---
+    async function fetchBatch() {
+        const batchUrl = `https://query2.finance.yahoo.com/v8/finance/spark?symbols=${ALL_SYMBOLS}&range=1d&interval=5m`;
+        const headers = { 'Accept': 'application/json', 'Referer': 'https://finance.yahoo.com/' };
+        
         const ctrl = new AbortController();
-        const id = setTimeout(() => ctrl.abort(), ms);
+        const tid = setTimeout(() => ctrl.abort(), 8000);
         try {
-            const r = await fetch(url, { signal: ctrl.signal });
-            clearTimeout(id);
-            return r;
-        } catch (e) {
-            clearTimeout(id);
-            throw e;
+            const r = await fetch(batchUrl, { headers, signal: ctrl.signal });
+            clearTimeout(tid);
+            if (!r.ok) return null;
+            const data = await r.json();
+            return data.spark?.result || null;
+        } catch (_) {
+            clearTimeout(tid);
+            return null;
         }
     }
 
-    async function fetchStockPrice(stock) {
-        const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${stock.symbol}?interval=1m&range=1d`;
-
-        // Try direct first (works locally, sometimes on GitHub Pages too)
-        try {
-            const r = await fetchWithTimeout(yahooUrl, 3000);
-            if (r.ok) {
-                const d = await r.json();
-                const meta = d.chart?.result?.[0]?.meta;
-                if (meta && meta.regularMarketPrice) {
-                    return { price: meta.regularMarketPrice, prevClose: meta.chartPreviousClose || meta.previousClose };
-                }
-            }
-        } catch (_) {}
-
-        // Try all proxies in parallel, take the first winner
-        const proxyRaces = PROXIES.map(async (fn) => {
+    // --- Per-stock fallback using query2 v8/chart ---
+    async function fetchSingle(stock) {
+        const url = `https://query2.finance.yahoo.com/v8/finance/chart/${stock.symbol}?interval=5m&range=1d`;
+        const headers = { 'Accept': 'application/json', 'Referer': 'https://finance.yahoo.com/' };
+        // Try direct, then proxies
+        const attempts = [
+            () => fetch(url, { headers }),
+            () => fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`),
+            () => fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`)
+        ];
+        for (const attempt of attempts) {
             try {
-                const r = await fetchWithTimeout(fn(yahooUrl), 5000);
-                if (!r.ok) throw new Error('not ok');
+                const ctrl = new AbortController();
+                const tid = setTimeout(() => ctrl.abort(), 6000);
+                const r = await attempt();
+                clearTimeout(tid);
+                if (!r.ok) continue;
                 const d = await r.json();
                 const meta = d.chart?.result?.[0]?.meta;
-                if (meta && meta.regularMarketPrice) {
+                if (meta?.regularMarketPrice) {
                     return { price: meta.regularMarketPrice, prevClose: meta.chartPreviousClose || meta.previousClose };
                 }
-                throw new Error('no price');
-            } catch (e) {
-                throw e;
-            }
-        });
-
-        try {
-            return await Promise.any(proxyRaces);
-        } catch (_) {
-            return null; // All proxies failed for this stock
+            } catch (_) {}
         }
+        return null;
     }
 
     let updatedCount = 0;
 
-    // Fetch all 14 stocks in parallel
-    const results = await Promise.allSettled(
-        BIST_STOCKS.map(async (stock) => {
-            const result = await fetchStockPrice(stock);
+    // --- Strategy 1: Try batch first ---
+    const batchResults = await fetchBatch();
+    if (batchResults && batchResults.length > 0) {
+        batchResults.forEach(item => {
+            const sym = item.symbol;
+            const stock = BIST_STOCKS.find(s => s.symbol === sym);
+            if (!stock) return;
+            const response = item.response?.[0];
+            const meta = response?.meta;
+            if (meta?.regularMarketPrice) {
+                stock.price = parseFloat(meta.regularMarketPrice);
+                const prev = meta.chartPreviousClose || meta.previousClose;
+                if (prev && prev > 0) {
+                    stock.change = parseFloat((((stock.price - prev) / prev) * 100).toFixed(2));
+                }
+                updatedCount++;
+            }
+        });
+    }
+
+    // --- Strategy 2: For any stock not updated by batch, try per-stock ---
+    if (updatedCount < BIST_STOCKS.length) {
+        const missing = BIST_STOCKS.filter(s => !batchResults?.find(r => r.symbol === s.symbol && r.response?.[0]?.meta?.regularMarketPrice));
+        await Promise.allSettled(missing.map(async (stock) => {
+            const result = await fetchSingle(stock);
             if (result) {
                 stock.price = parseFloat(result.price);
                 if (result.prevClose && result.prevClose > 0) {
@@ -130,8 +142,8 @@ async function fetchLiveBistPrices() {
                 }
                 updatedCount++;
             }
-        })
-    );
+        }));
+    }
 
     if (updatedCount > 0) {
         renderOverviewMetrics();
@@ -142,6 +154,7 @@ async function fetchLiveBistPrices() {
 
     return updatedCount;
 }
+
 
 // Exact ROIC - WACC Evaluation Rules from User Image
 function getRoicWaccEvaluation(roic, wacc) {
