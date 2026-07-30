@@ -73,27 +73,54 @@ async function fetchLiveBistPrices() {
             columns: ['name', 'close', 'change'],
             range: [0, 20]
         });
-        const ctrl = new AbortController();
-        const tid = setTimeout(() => ctrl.abort(), 8000);
+        // Try direct first (no custom Origin — let browser handle CORS naturally)
         try {
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), 8000);
             const r = await fetch(url, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Origin': 'https://www.tradingview.com',
-                    'Referer': 'https://www.tradingview.com/'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body,
                 signal: ctrl.signal
             });
             clearTimeout(tid);
-            if (!r.ok) return null;
-            const data = await r.json();
-            return data.data || null;
-        } catch (_) {
-            clearTimeout(tid);
-            return null;
-        }
+            if (r.ok) {
+                const data = await r.json();
+                if (data.data?.length > 0) return data.data;
+            }
+        } catch (_) {}
+
+        // CORS proxy fallback for TradingView
+        try {
+            const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+            const ctrl2 = new AbortController();
+            const tid2 = setTimeout(() => ctrl2.abort(), 8000);
+            const r2 = await fetch(proxyUrl, {
+                method: 'GET', // allorigins proxies GET only, so we use their post wrapper
+                signal: ctrl2.signal
+            });
+            clearTimeout(tid2);
+        } catch (_) {}
+
+        // corsproxy.io POST fallback
+        try {
+            const proxyUrl2 = 'https://corsproxy.io/?' + encodeURIComponent(url);
+            const ctrl3 = new AbortController();
+            const tid3 = setTimeout(() => ctrl3.abort(), 8000);
+            const r3 = await fetch(proxyUrl2, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body,
+                signal: ctrl3.signal
+            });
+            clearTimeout(tid3);
+            if (r3.ok) {
+                const data3 = await r3.json();
+                if (data3.data?.length > 0) return data3.data;
+            }
+        } catch (_) {}
+
+        return null;
     }
 
     // ── Strateji 2: Yahoo Finance batch (yedek) ──
@@ -1250,17 +1277,35 @@ async function manualRefreshKapFeed() {
     if (spinnerHeader) spinnerHeader.classList.add("spin-icon");
     if (spinnerTab) spinnerTab.classList.add("spin-icon");
 
-    showToast("🔄 BIST Canlı Fiyatları & KAP Akışı Kontrol Ediliyor...", "info");
+    showToast("🔄 BIST Canlı Fiyatlar Kontrol Ediliyor...", "info");
 
     try {
-        const initialPrices = BIST_STOCKS.map(s => s.price);
+        // Önce anlık fiyatları kaydet
+        const snapshot = BIST_STOCKS.map(s => ({
+            code: s.code,
+            name: s.name,
+            before: s.price,
+            change: s.change
+        }));
 
         await fetchLiveBistPrices();
 
-        const finalPrices = BIST_STOCKS.map(s => s.price);
-        let changedCount = 0;
-        initialPrices.forEach((p, idx) => {
-            if (p !== finalPrices[idx]) changedCount++;
+        // Değişenleri bul
+        const changes = [];
+        snapshot.forEach((snap, idx) => {
+            const after = BIST_STOCKS[idx].price;
+            const diff = after - snap.before;
+            const diffPct = snap.before > 0 ? ((diff / snap.before) * 100) : 0;
+            if (Math.abs(diff) >= 0.01) {
+                changes.push({
+                    code: snap.code,
+                    name: snap.name,
+                    before: snap.before,
+                    after,
+                    diff,
+                    diffPct
+                });
+            }
         });
 
         renderCustomTickerTape();
@@ -1274,18 +1319,92 @@ async function manualRefreshKapFeed() {
 
         const nowStr = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-        if (changedCount > 0) {
-            showToast(`⚡ ${changedCount} Şirkette Fiyat Değişimi Algılandı! Verileriniz Güncellendi (${nowStr}).`, "success");
+        if (changes.length > 0) {
+            // Detaylı değişim modalı göster
+            showPriceChangeReport(changes, nowStr);
         } else {
-            showToast(`ℹ️ Fiyatlarda veya KAP Akışında Yeni Bir Değişim Bulunmadı (${nowStr}). Raporu Görmek İçin Tıklayın!`, "info");
+            showToast(`ℹ️ Fiyatlarda değişim yok (${nowStr}) — Seans saatlerinde güncellenir.`, "info");
         }
     } catch (e) {
         console.error("Sync error:", e);
+        showToast("❌ Güncelleme sırasında hata oluştu.", "error");
     } finally {
         if (spinnerHeader) spinnerHeader.classList.remove("spin-icon");
         if (spinnerTab) spinnerTab.classList.remove("spin-icon");
         initLucideIcons();
     }
+}
+
+function showPriceChangeReport(changes, nowStr) {
+    // Mevcut rapor modalını kaldır
+    const existing = document.getElementById('priceChangeReportModal');
+    if (existing) existing.remove();
+
+    const rows = changes.map(c => {
+        const dir = c.diff >= 0 ? 'trend-up' : 'trend-down';
+        const arrow = c.diff >= 0 ? '▲' : '▼';
+        const sign = c.diff >= 0 ? '+' : '';
+        return `
+            <div style="display:flex;justify-content:space-between;align-items:center;
+                        padding:10px 14px;border-radius:10px;background:var(--bg-main);
+                        border:1px solid var(--border-color);margin-bottom:8px;">
+                <div>
+                    <span style="font-weight:800;font-size:0.95rem;color:var(--text-primary)">${c.code}</span>
+                    <span style="font-size:0.78rem;color:var(--text-muted);margin-left:8px">${c.name}</span>
+                </div>
+                <div style="text-align:right">
+                    <span style="font-family:var(--font-mono);font-size:0.88rem;color:var(--text-muted)">
+                        ${c.before.toLocaleString('tr-TR',{minimumFractionDigits:2})} ₺
+                    </span>
+                    <span style="margin:0 6px;color:var(--text-muted)">→</span>
+                    <span class="${dir}" style="font-family:var(--font-mono);font-weight:800;font-size:0.95rem">
+                        ${c.after.toLocaleString('tr-TR',{minimumFractionDigits:2})} ₺
+                    </span>
+                    <div class="${dir}" style="font-size:0.78rem;font-weight:700">
+                        ${arrow} ${sign}${c.diff.toLocaleString('tr-TR',{minimumFractionDigits:2})} ₺
+                        (${sign}%${Math.abs(c.diffPct).toFixed(2)})
+                    </div>
+                </div>
+            </div>`;
+    }).join('');
+
+    const modal = document.createElement('div');
+    modal.id = 'priceChangeReportModal';
+    modal.style.cssText = `
+        position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);
+        display:flex;align-items:center;justify-content:center;padding:20px;
+        backdrop-filter:blur(4px);animation:fadeIn 0.2s ease;
+    `;
+    modal.innerHTML = `
+        <div style="background:var(--bg-card);border:1px solid var(--border-color);
+                    border-radius:var(--radius-lg);padding:28px;width:100%;max-width:520px;
+                    max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-glow)">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+                <div>
+                    <div style="font-family:var(--font-heading);font-size:1.15rem;font-weight:800;color:var(--text-primary)">
+                        ⚡ Fiyat Değişim Raporu
+                    </div>
+                    <div style="font-size:0.78rem;color:var(--text-muted);margin-top:4px">
+                        ${nowStr} — ${changes.length} hissede değişim algılandı
+                    </div>
+                </div>
+                <button onclick="document.getElementById('priceChangeReportModal').remove()"
+                    style="background:var(--bg-main);border:1px solid var(--border-color);border-radius:8px;
+                           width:34px;height:34px;cursor:pointer;font-size:1.1rem;color:var(--text-muted)">
+                    ✕
+                </button>
+            </div>
+            ${rows}
+            <button onclick="document.getElementById('priceChangeReportModal').remove()"
+                style="width:100%;margin-top:16px;padding:12px;background:var(--accent-primary);
+                       color:#fff;border:none;border-radius:var(--radius-md);font-weight:700;
+                       font-size:0.92rem;cursor:pointer;font-family:var(--font-heading)">
+                Kapat
+            </button>
+        </div>
+    `;
+    modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+    document.body.appendChild(modal);
 }
 
 function openSyncAuditModal() {
