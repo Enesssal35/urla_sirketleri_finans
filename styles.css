@@ -693,3 +693,99 @@ body {
     .kap-card { padding: 14px; }
 }
 
+/* ---- Landscape (Yatay) Mode — iPhone 15 Pro Max: 932x430 ---- */
+@media (max-height: 500px) and (orientation: landscape) {
+    body {
+        padding-bottom: max(20px, env(safe-area-inset-bottom));
+        padding-left: max(12px, env(safe-area-inset-left));
+        padding-right: max(12px, env(safe-area-inset-right));
+    }
+
+    .ticker-tape-container {
+        /* Thin ticker in landscape */
+        padding: 6px 0;
+    }
+
+    .app-container {
+        padding: 10px max(16px, env(safe-area-inset-right)) 10px max(16px, env(safe-area-inset-left));
+    }
+
+    /* Compact header in landscape — side-by-side layout */
+    .header-bar {
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: nowrap;
+        padding: 10px 16px;
+        margin-bottom: 10px;
+        gap: 10px;
+    }
+
+    .brand-title { font-size: 1rem; }
+    .brand-subtitle { display: none; } /* Hide subtitle to save space */
+    .brand-logo { width: 34px; height: 34px; }
+
+    .header-actions {
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 8px;
+        flex: 1;
+        justify-content: flex-end;
+    }
+
+    .search-box { width: 180px; flex: none; }
+    .search-box input { min-height: 36px; font-size: 0.85rem; padding: 6px 12px 6px 34px; }
+
+    .btn-primary, .btn-secondary, .theme-toggle-btn {
+        min-height: 36px;
+        padding: 6px 12px;
+        font-size: 0.82rem;
+        width: auto;
+    }
+
+    /* Summary metrics: horizontal row in landscape */
+    .summary-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+
+    .metric-card { padding: 12px; }
+    .metric-value { font-size: 1.2rem; }
+    .metric-header { font-size: 0.72rem; }
+    .metric-icon { width: 28px; height: 28px; }
+
+    /* Tighter tabs */
+    .tab-navigation {
+        gap: 4px;
+        margin-bottom: 10px;
+        padding-bottom: 4px;
+    }
+
+    .tab-btn { padding: 7px 12px; font-size: 0.8rem; }
+
+    /* Table cells: compact */
+    .custom-table th, .custom-table td { padding: 8px 10px; font-size: 0.78rem; }
+    .stock-avatar { width: 28px; height: 28px; font-size: 0.68rem; }
+
+    /* KAP: 2 column grid in landscape */
+    .kap-feed-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .kap-card { padding: 12px; }
+
+    /* Modal: landscape full-width sheet */
+    .modal-overlay { align-items: center; padding: 20px; }
+    .modal-content {
+        max-height: 90vh;
+        border-radius: var(--radius-lg);
+        padding: 16px;
+        overflow-y: auto;
+    }
+
+    /* Toast: smaller in landscape */
+    .toast-container {
+        bottom: max(12px, env(safe-area-inset-bottom));
+        right: max(12px, env(safe-area-inset-right));
+    }
+    .toast-item { padding: 8px 14px; font-size: 0.8rem; }
+}
+
+

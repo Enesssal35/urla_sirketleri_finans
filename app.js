@@ -60,65 +60,87 @@ function initLucideIcons() {
 
 // Automatic Real-Time BIST Live Price Synchronization
 async function fetchLiveBistPrices() {
-    const proxies = [
-        (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-        (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`
+    const PROXIES = [
+        (u) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+        (u) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+        (u) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(u)}`
     ];
 
-    let updated = false;
-
-    for (let stock of BIST_STOCKS) {
-        const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${stock.symbol}?interval=1m`;
-        let success = false;
-
+    async function fetchWithTimeout(url, ms = 4000) {
+        const ctrl = new AbortController();
+        const id = setTimeout(() => ctrl.abort(), ms);
         try {
-            const res = await fetch(yahooUrl);
-            if (res.ok) {
-                const data = await res.json();
-                const meta = data.chart?.result?.[0]?.meta;
-                if (meta && meta.regularMarketPrice) {
-                    stock.price = meta.regularMarketPrice;
-                    const prevClose = meta.chartPreviousClose || meta.previousClose;
-                    if (prevClose > 0) {
-                        stock.change = parseFloat((((stock.price - prevClose) / prevClose) * 100).toFixed(2));
-                    }
-                    success = true;
-                    updated = true;
-                }
-            }
+            const r = await fetch(url, { signal: ctrl.signal });
+            clearTimeout(id);
+            return r;
         } catch (e) {
-            // Direct fetch failed, fallback to CORS proxies
-        }
-
-        if (!success) {
-            for (let proxyFn of proxies) {
-                try {
-                    const proxyUrl = proxyFn(yahooUrl);
-                    const res = await fetch(proxyUrl);
-                    if (res.ok) {
-                        const data = await res.json();
-                        const meta = data.chart?.result?.[0]?.meta;
-                        if (meta && meta.regularMarketPrice) {
-                            stock.price = meta.regularMarketPrice;
-                            const prevClose = meta.chartPreviousClose || meta.previousClose;
-                            if (prevClose > 0) {
-                                stock.change = parseFloat((((stock.price - prevClose) / prevClose) * 100).toFixed(2));
-                            }
-                            updated = true;
-                            break;
-                        }
-                    }
-                } catch (err) {}
-            }
+            clearTimeout(id);
+            throw e;
         }
     }
 
-    if (updated) {
+    async function fetchStockPrice(stock) {
+        const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${stock.symbol}?interval=1m&range=1d`;
+
+        // Try direct first (works locally, sometimes on GitHub Pages too)
+        try {
+            const r = await fetchWithTimeout(yahooUrl, 3000);
+            if (r.ok) {
+                const d = await r.json();
+                const meta = d.chart?.result?.[0]?.meta;
+                if (meta && meta.regularMarketPrice) {
+                    return { price: meta.regularMarketPrice, prevClose: meta.chartPreviousClose || meta.previousClose };
+                }
+            }
+        } catch (_) {}
+
+        // Try all proxies in parallel, take the first winner
+        const proxyRaces = PROXIES.map(async (fn) => {
+            try {
+                const r = await fetchWithTimeout(fn(yahooUrl), 5000);
+                if (!r.ok) throw new Error('not ok');
+                const d = await r.json();
+                const meta = d.chart?.result?.[0]?.meta;
+                if (meta && meta.regularMarketPrice) {
+                    return { price: meta.regularMarketPrice, prevClose: meta.chartPreviousClose || meta.previousClose };
+                }
+                throw new Error('no price');
+            } catch (e) {
+                throw e;
+            }
+        });
+
+        try {
+            return await Promise.any(proxyRaces);
+        } catch (_) {
+            return null; // All proxies failed for this stock
+        }
+    }
+
+    let updatedCount = 0;
+
+    // Fetch all 14 stocks in parallel
+    const results = await Promise.allSettled(
+        BIST_STOCKS.map(async (stock) => {
+            const result = await fetchStockPrice(stock);
+            if (result) {
+                stock.price = parseFloat(result.price);
+                if (result.prevClose && result.prevClose > 0) {
+                    stock.change = parseFloat((((stock.price - result.prevClose) / result.prevClose) * 100).toFixed(2));
+                }
+                updatedCount++;
+            }
+        })
+    );
+
+    if (updatedCount > 0) {
         renderOverviewMetrics();
         renderFinancialTable();
         renderCustomTickerTape();
         if (activeTab === "portfolioPane") renderPortfolioTable();
     }
+
+    return updatedCount;
 }
 
 // Exact ROIC - WACC Evaluation Rules from User Image
