@@ -1,719 +1,364 @@
 <!DOCTYPE html>
-<html lang="tr" data-theme="light">
+<html lang="tr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>BIST Canlı Fiyat Akışlı ROIC / ROE / WACC & KAP İkaz Terminali</title>
-    <meta name="description" content="14 BIST Şirketinin portföy yönetimi, ağırlıklı ROIC/ROE/WACC verimliliği, Telegram bildirim botu, özel alarm tanımlama ve çeyreklik finansal analiz platformu.">
-    <!-- iOS / iPhone 15 Pro Max Support -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="BIST Terminal">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#070a13" media="(prefers-color-scheme: dark)">
-    <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)">
-
-    <!-- Lucide Icons & Chart.js CDN -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- Custom CSS -->
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="BIST Hisse Takip Paneli — ROE/ROIC/WACC ısı haritası ve KAP bildirim analizi">
+  <title>BIST Tracker — Finansal Analiz & KAP Takip</title>
+  <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
 
-    <!-- Custom Live HTML5 BIST Ticker Tape Banner -->
-    <div class="ticker-tape-container">
-        <div class="ticker-tape-track" id="tickerTapeTrack">
-            <!-- Rendered dynamically by app.js -->
+<!-- ═══════════════════════════════════════════════════════
+     HEADER
+═══════════════════════════════════════════════════════ -->
+<header class="header">
+  <div class="header-brand">
+    <div class="header-logo">📊</div>
+    <div>
+      <div class="header-title">BIST Tracker</div>
+      <div class="header-subtitle">Finansal Analiz & KAP Bildirimleri</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span id="live-clock">--:--:-- — --- --</span>
+    <button class="btn-secondary" id="btn-manage-stocks">⚙️ Hisseler</button>
+    <button class="btn-primary" id="btn-manual-scan">🔄 Manuel Tara</button>
+  </div>
+</header>
+
+<!-- Alert banner (yeni bildirim geldiğinde) -->
+<div id="new-alert-banner">🔔 Yeni bildirim!</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     APP LAYOUT
+═══════════════════════════════════════════════════════ -->
+<div class="app-layout">
+
+  <!-- ─── SIDEBAR ─── -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Paneller</div>
+      <button class="tab-btn active" data-tab="kap">
+        <span class="tab-icon">📋</span>
+        KAP Bildirimleri
+      </button>
+      <button class="tab-btn" data-tab="heatmap">
+        <span class="tab-icon">🔥</span>
+        Finansal Isı Haritası
+      </button>
+      <button class="tab-btn" data-tab="settings">
+        <span class="tab-icon">⚙️</span>
+        Ayarlar
+      </button>
+    </div>
+
+    <!-- Scheduler status -->
+    <div class="sidebar-scheduler">
+      <h4>📡 Otomatik Tarama</h4>
+      <div id="scheduler-status">Yükleniyor…</div>
+    </div>
+  </aside>
+
+  <!-- ─── MAIN CONTENT ─── -->
+  <main class="main-content">
+
+    <!-- ════════════════════════════════════════
+         TAB: KAP BİLDİRİMLERİ
+    ════════════════════════════════════════ -->
+    <div id="panel-kap" class="tab-panel active">
+
+      <div class="panel-header">
+        <div>
+          <h1 class="panel-title">KAP Bildirimleri</h1>
+          <div class="panel-subtitle">
+            Faaliyet raporları, sözleşmeler, sermaye artırımı, CapEx ve daha fazlası
+          </div>
         </div>
-    </div>
-
-    <div class="app-container">
-
-        <!-- Top Header & Brand Bar -->
-        <header class="header-bar">
-            <div class="brand-section">
-                <div class="brand-logo">
-                    <i data-lucide="line-chart"></i>
-                </div>
-                <div>
-                    <h1 class="brand-title">BIST TARİHSEL ROIC, ROE & WACC KONTROL MERKEZİ</h1>
-                    <div class="brand-subtitle">14 Şirket Özel Sıralı BIST Fiyat Akışı, WACC Sermaye Maliyeti & Portföy Terminali</div>
-                </div>
-            </div>
-
-            <div class="header-actions">
-                <div class="search-box">
-                    <i data-lucide="search"></i>
-                    <input type="text" id="searchInput" placeholder="Hisse (EGEEN, FROTO, LKMNH...) ara...">
-                </div>
-
-                <!-- Theme Switcher Toggle Button -->
-                <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()">
-                    <i data-lucide="moon"></i> Koyu Moda Geç
-                </button>
-
-                <button class="btn-primary" onclick="manualRefreshKapFeed()" style="background: linear-gradient(135deg, #0284c7, #4f46e5); border: none; box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3);">
-                    <i data-lucide="refresh-cw" id="headerKapSpinner"></i> Canlı KAP & Fiyat Yenile
-                </button>
-
-                <button class="btn-secondary" onclick="exportToCSV()">
-                    <i data-lucide="download"></i> Excel / CSV İndir
-                </button>
-
-                <div class="badge-live">
-                    <div class="pulse-dot"></div>
-                    <span>BIST CANLI AKIŞ</span>
-                </div>
-            </div>
-        </header>
-
-        <!-- Metrics Overview Section -->
-        <section class="summary-grid" id="summaryGrid">
-            <!-- Rendered dynamically by app.js -->
-        </section>
-
-        <!-- Tab Navigation -->
-        <nav class="tab-navigation">
-            <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard', this)">
-                <i data-lucide="table"></i> ROIC, ROE & WACC Ana Tablo
-            </button>
-            <button class="tab-btn" data-tab="portfolioPane" onclick="switchTab('portfolioPane', this)">
-                <i data-lucide="pie-chart"></i> Portföyüm & Kâr/Zarar
-            </button>
-            <button class="tab-btn" data-tab="customRulesPane" onclick="switchTab('customRulesPane', this)">
-                <i data-lucide="sliders"></i> Özel Alarm & Eşik Kuralları
-            </button>
-            <button class="tab-btn" data-tab="telegramPane" onclick="switchTab('telegramPane', this)">
-                <i data-lucide="send"></i> Telegram Bildirim Botu
-            </button>
-            <button class="tab-btn" data-tab="tradingviewPane" onclick="switchTab('tradingviewPane', this)">
-                <i data-lucide="activity"></i> Canlı Performans Grafiği
-            </button>
-            <button class="tab-btn" data-tab="historicalMatrix" onclick="switchTab('historicalMatrix', this)">
-                <i data-lucide="grid"></i> 20 Çeyreklik Isı Haritası
-            </button>
-            <button class="tab-btn" data-tab="compareChartPane" onclick="switchTab('compareChartPane', this)">
-                <i data-lucide="trending-up"></i> Kıyaslama Grafiği
-            </button>
-            <button class="tab-btn" data-tab="kapFeed" onclick="switchTab('kapFeed', this)">
-                <i data-lucide="bell"></i> KAP İkazları
-            </button>
-            <button class="tab-btn" data-tab="magicFormula" onclick="switchTab('magicFormula', this)">
-                <i data-lucide="sparkles"></i> Sihirli Formül
-            </button>
-        </nav>
-
-        <!-- TAB 1: Main Table -->
-        <main class="tab-pane active" id="dashboard">
-            <div class="table-controls">
-                <div class="filter-group">
-                    <label style="color: var(--text-secondary); font-size: 0.88rem; font-weight: 600;">Sektör Filtresi:</label>
-                    <select class="select-custom" id="sectorFilter">
-                        <option value="all">Tüm Sektörler (14 Şirket)</option>
-                        <option value="Otomotiv">Otomotiv & Yan Sanayi</option>
-                        <option value="Havacılık & Yer Hizmetleri">Havacılık & Yer Hizmetleri</option>
-                        <option value="Savunma & Ticari Araç">Savunma Sanayi</option>
-                        <option value="Metal Ana Sanayi / Çelik Boru">Metal & Çelik Boru</option>
-                        <option value="Hızlı Tüketim / İçecek">Hızlı Tüketim / İçecek</option>
-                        <option value="Aracı Kurum / Finans">Finans & Sigorta</option>
-                        <option value="Bilişim / Yazılım">Bilişim & Yazılım</option>
-                        <option value="Sağlık & Hastanecilik">Sağlık & Hastanecilik</option>
-                    </select>
-                </div>
-
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <!-- Traffic Light Legend Help -->
-                    <div style="font-size: 0.82rem; display: flex; gap: 8px; align-items: center; background: var(--bg-card); padding: 6px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-                        <span style="font-weight: 700; color: var(--text-primary);">Trafik Işığı:</span>
-                        <span class="badge-highlight badge-emerald">🟢 Olumlu (İyi)</span>
-                        <span class="badge-highlight badge-amber">🟡 Nötr (Makul)</span>
-                        <span class="badge-highlight badge-rose">🔴 Olumsuz (Risk)</span>
-                    </div>
-
-                    <button class="btn-primary" style="font-size: 0.82rem; padding: 6px 12px;" onclick="openValuationRulesHelpModal()">
-                        <i data-lucide="help-circle"></i> Değerleme Kuralları Rehberi
-                    </button>
-                </div>
-            </div>
-
-            <div class="table-wrapper">
-                <table class="custom-table">
-                    <thead>
-                        <tr>
-                            <th onclick="sortTable('order')">Sıra <i data-lucide="arrow-up-down" style="width:14px;"></i></th>
-                            <th onclick="sortTable('code')">Hisse Senetlerim</th>
-                            <th onclick="sortTable('sector')">Sektör</th>
-                            <th onclick="sortTable('price')">Canlı BIST Fiyatı</th>
-                            <th onclick="sortTable('roic')">ROIC (%) <i data-lucide="arrow-up-down" style="width:14px;"></i></th>
-                            <th onclick="sortTable('wacc')">WACC (%) <i data-lucide="arrow-up-down" style="width:14px;"></i></th>
-                            <th onclick="sortTable('eva')">EVA Spread (ROIC-WACC)</th>
-                            <th onclick="sortTable('roe')">ROE (%) <i data-lucide="arrow-up-down" style="width:14px;"></i></th>
-                            <th>DuPont (Marj / Devir / Kaldıraç)</th>
-                            <th onclick="sortTable('peRatio')">F/K</th>
-                            <th onclick="sortTable('pbRatio')">PD/DD</th>
-                            <th onclick="sortTable('netDebtToEbitda')">Net Borç/FAVÖK</th>
-                            <th>Değerleme Kuralı & Kararı</th>
-                            <th>Detay & Rapor</th>
-                        </tr>
-                    </thead>
-                    <tbody id="financialTableBody">
-                        <!-- Rendered by app.js -->
-                    </tbody>
-                </table>
-            </div>
-        </main>
-
-        <!-- TAB 2: Portföyüm & Kâr/Zarar Yönetimi -->
-        <section class="tab-pane" id="portfolioPane">
-            <div style="margin-bottom: 20px;">
-                <h3 style="font-family: var(--font-heading); font-size: 1.3rem; color: var(--text-primary);">
-                    💼 Kişisel Portföy Yönetimi & Ağırlıklı ROIC / WACC Analizi
-                </h3>
-                <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                    Elinizdeki hisse adedini ve ortalama maliyetinizi girin; toplam portföy değerinizi, kâr/zararınızı, **ağırlıklı ROIC getirinizi** ve **WACC sermaye maliyeti farkınızı** hesaplayalım.
-                </p>
-            </div>
-
-            <div class="summary-grid" style="margin-bottom: 20px;">
-                <div class="metric-card">
-                    <div class="metric-header"><span>GÜNCEL PORTFÖY DEĞERİ</span><div class="metric-icon icon-emerald"><i data-lucide="wallet"></i></div></div>
-                    <div class="metric-value" id="portTotalValue">0.00 ₺</div>
-                    <div class="metric-subtext">14 Hisse Anlık BIST Toplam Değeri</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-header"><span>TOPLAM YATIRILAN SERMAYE</span><div class="metric-icon icon-blue"><i data-lucide="dollar-sign"></i></div></div>
-                    <div class="metric-value" id="portTotalCost">0.00 ₺</div>
-                    <div class="metric-subtext">Maliyetlerinize Göre Toplam Yatırım</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-header"><span>TOPLAM KÂR / ZARAR</span><div class="metric-icon icon-cyan"><i data-lucide="trending-up"></i></div></div>
-                    <div class="metric-value" id="portTotalPnl">0.00 ₺</div>
-                    <div class="metric-subtext">Realize Olmamış Net Kâr / Zarar</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-header"><span>PORTFÖYÜMÜN AĞIRLIKLI ROIC'İ</span><div class="metric-icon icon-amber"><i data-lucide="zap"></i></div></div>
-                    <div class="metric-value" id="portWeightedRoic">%0.0</div>
-                    <div class="metric-subtext">Yatırımınızın Sermaye Verim Ağırlığı</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-header"><span>PORTFÖY AĞIRLIKLI WACC</span><div class="metric-icon icon-purple"><i data-lucide="percent"></i></div></div>
-                    <div class="metric-value" id="portWeightedWacc">%0.0</div>
-                    <div class="metric-subtext">Ortalama Sermaye Maliyetiniz</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-header"><span>NET EVA KATMA DEĞER</span><div class="metric-icon icon-emerald"><i data-lucide="sparkles"></i></div></div>
-                    <div class="metric-value" id="portNetEva">%0.0</div>
-                    <div class="metric-subtext">ROIC - WACC Net Verimlilik Farkı</div>
-                </div>
-            </div>
-
-            <div class="table-wrapper">
-                <table class="custom-table">
-                    <thead>
-                        <tr>
-                            <th>Sıra</th>
-                            <th>Hisse Kodu</th>
-                            <th>Güncel Fiyat</th>
-                            <th>Adetim (Lot)</th>
-                            <th>Maliyetim (TL)</th>
-                            <th>Yatırılan Tutar</th>
-                            <th>Güncel Değer</th>
-                            <th>Kâr / Zarar</th>
-                            <th>Hisse ROIC</th>
-                            <th>Hisse WACC</th>
-                            <th>EVA Spread (ROIC-WACC)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="portfolioTableBody">
-                        <!-- Rendered by app.js -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- TAB 3: Özel Alarm & Eşik Kuralları Modülü -->
-        <section class="tab-pane" id="customRulesPane">
-            <div class="recom-panel" style="margin-bottom: 24px;">
-                <h3 style="font-family: var(--font-heading); font-size: 1.3rem; margin-bottom: 8px; color: var(--text-primary);">
-                    🎯 Özel Alarm ve Eşik Kuralı Oluşturucu
-                </h3>
-                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 20px;">
-                    Kendinize özel filtre kuralları tanımlayın (Örn: ROIC %35 üzerine çıkınca *"Mükemmel Verim"* etiketi bas, F/K 8 altına inince *"Cazip F/K"* uyarısı ver).
-                </p>
-
-                <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; background: var(--bg-main); padding: 18px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                    <div>
-                        <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Hisse Seçin:</label>
-                        <select class="select-custom" id="ruleStock">
-                            <option value="ALL">Tüm Hisseler (14 Hisse)</option>
-                            <option value="EGEEN">EGEEN</option>
-                            <option value="CLEBI">CLEBI</option>
-                            <option value="FROTO">FROTO</option>
-                            <option value="BRSAN">BRSAN</option>
-                            <option value="CCOLA">CCOLA</option>
-                            <option value="OTKAR">OTKAR</option>
-                            <option value="ISMEN">ISMEN</option>
-                            <option value="PGSUS">PGSUS</option>
-                            <option value="ANSGR">ANSGR</option>
-                            <option value="LOGO">LOGO</option>
-                            <option value="LKMNH">LKMNH</option>
-                            <option value="ALKA">ALKA</option>
-                            <option value="SODSN">SODSN</option>
-                            <option value="ALTNY">ALTNY</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Finansal Metrik:</label>
-                        <select class="select-custom" id="ruleMetric">
-                            <option value="roic">ROIC (%)</option>
-                            <option value="wacc">WACC (%)</option>
-                            <option value="roe">ROE (%)</option>
-                            <option value="peRatio">F/K Oranı</option>
-                            <option value="pbRatio">PD/DD Oranı</option>
-                            <option value="netDebtToEbitda">Net Borç / FAVÖK</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Operatör:</label>
-                        <select class="select-custom" id="ruleOperator">
-                            <option value=">=">Büyük Eşit (>=)</option>
-                            <option value="<=">Küçük Eşit (<=)</option>
-                            <option value=">">Büyük (>)</option>
-                            <option value="<">Küçük (<)</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Hedef Değer:</label>
-                        <input type="number" step="0.1" class="portfolio-input" id="ruleValue" value="35" style="width: 90px; text-align: center;">
-                    </div>
-
-                    <div>
-                        <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Etiket Adı:</label>
-                        <input type="text" class="portfolio-input" id="ruleLabel" value="Mükemmel Verim" style="width: 130px; text-align: left;">
-                    </div>
-
-                    <div>
-                        <label style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Rozet Rengi:</label>
-                        <select class="select-custom" id="ruleBadge">
-                            <option value="badge-emerald">🟢 Yeşil (Olumlu)</option>
-                            <option value="badge-amber">🟡 Sarı (Nötr)</option>
-                            <option value="badge-rose">🔴 Kırmızı (Olumsuz)</option>
-                            <option value="badge-cyan">🔵 Mavi (Bilgi)</option>
-                        </select>
-                    </div>
-
-                    <div style="margin-top: 20px;">
-                        <button class="btn-primary" onclick="addCustomRule()">
-                            <i data-lucide="plus"></i> Alarm Ekle
-                        </button>
-                    </div>
-                </div>
-
-                <div style="margin-top: 20px;">
-                    <h4 style="font-family: var(--font-heading); font-size: 1.05rem; margin-bottom: 12px; color: var(--text-primary);">
-                        Aktif Özel Alarmlarınız:
-                    </h4>
-                    <div id="customRulesList" style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <!-- Rendered by app.js -->
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 4: Telegram Canlı İkaz Ayarları -->
-        <section class="tab-pane" id="telegramPane">
-            <div class="recom-panel">
-                <h3 style="font-family: var(--font-heading); font-size: 1.3rem; margin-bottom: 10px; color: var(--text-primary);">
-                    📱 Telegram Canlı Anlık İkaz Ayarları
-                </h3>
-                <p style="color: var(--text-secondary); font-size: 0.92rem; margin-bottom: 20px;">
-                    Bilgisayar başında olmasanız bile Telegram botumuz yeni KAP bildirimi veya ROIC/WACC değişimi olduğunda telefonunuza anında ücretsiz mesaj gönderir.
-                </p>
-
-                <div style="max-width: 600px; background: var(--bg-main); padding: 24px; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-bottom: 24px;">
-                    <div style="margin-bottom: 16px;">
-                        <label style="font-size: 0.88rem; font-weight: 600; display: block; margin-bottom: 6px;">Telegram Bot Token:</label>
-                        <input type="text" id="tgTokenInput" class="search-box input" placeholder="Örn: 7123456789:AAHxxxxxx..." style="width: 100%; padding: 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary);">
-                    </div>
-
-                    <div style="margin-bottom: 20px;">
-                        <label style="font-size: 0.88rem; font-weight: 600; display: block; margin-bottom: 6px;">Telegram Chat ID (Kullanıcı veya Grup ID):</label>
-                        <input type="text" id="tgChatIdInput" class="search-box input" placeholder="Örn: 123456789" style="width: 100%; padding: 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); color: var(--text-primary);">
-                    </div>
-
-                    <div style="display: flex; gap: 12px;">
-                        <button class="btn-primary" onclick="saveTelegramConfig()">
-                            <i data-lucide="save"></i> Ayarları Kaydet
-                        </button>
-                        <button class="btn-secondary" onclick="sendTestTelegramMessage()">
-                            <i data-lucide="send"></i> Telefonuma Test Mesajı At
-                        </button>
-                    </div>
-                </div>
-
-                <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
-                    <strong>Nasıl Telegram Botu Kurulur (1 Dakika):</strong><br>
-                    1. Telegram uygulamanızda <code>@BotFather</code> hesabını aratıp <code>/newbot</code> komutunu gönderin.<br>
-                    2. Size verilen <strong>Bot Token</strong> bilgisini kopyalayıp yukarıdaki kutuya yapıştırın.<br>
-                    3. Telegram'da <code>@userinfobot</code> botuna mesaj atarak <strong>Chat ID</strong> numaranızı öğrenin ve yapıştırın.
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 5: Canlı Grafik & Gelir Pane -->
-        <section class="tab-pane" id="tradingviewPane">
-            <div style="margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-                <div>
-                    <h3 id="technicalChartTitle" style="font-family: var(--font-heading); font-size: 1.2rem; color: var(--text-primary);">
-                        BIST Canlı Performans & Verimlilik Grafiği
-                    </h3>
-                    <p style="color: var(--text-secondary); font-size: 0.88rem;">
-                        14 BIST hissenizin çeyreklik ciro büyümesi, ROIC, ROE ve WACC maliyet trend analizi.
-                    </p>
-                </div>
-                <div style="display: flex; gap: 12px; align-items: center;">
-                    <select class="select-custom" id="tvSymbolSelect" onchange="changeTvPaneSymbol(this.value)">
-                        <option value="EGEEN">1. EGEEN - Ege Endüstri</option>
-                        <option value="CLEBI">2. CLEBI - Çelebi Hava</option>
-                        <option value="FROTO" selected>3. FROTO - Ford Otosan</option>
-                        <option value="BRSAN">4. BRSAN - Borusan Boru</option>
-                        <option value="CCOLA">5. CCOLA - Coca-Cola İçecek</option>
-                        <option value="OTKAR">6. OTKAR - Otokar</option>
-                        <option value="ISMEN">7. ISMEN - İş Yatırım</option>
-                        <option value="PGSUS">8. PGSUS - Pegasus</option>
-                        <option value="ANSGR">9. ANSGR - Anadolu Sigorta</option>
-                        <option value="LOGO">10. LOGO - Logo Yazılım</option>
-                        <option value="LKMNH">11. LKMNH - Lokman Hekim Sağlık</option>
-                        <option value="ALKA">12. ALKA - Alkim Kağıt</option>
-                        <option value="SODSN">13. SODSN - Sodaş Sodyum</option>
-                        <option value="ALTNY">14. ALTNY - Altınay Savunma</option>
-                    </select>
-
-                    <a id="tvDirectLink" href="https://tr.tradingview.com/symbols/BIST-FROTO/" target="_blank" class="btn-primary" style="font-size: 0.82rem;">
-                        <i data-lucide="external-link"></i> TradingView.com'da Aç
-                    </a>
-                </div>
-            </div>
-
-            <div class="chart-container-box" style="height: 520px;">
-                <canvas id="technicalPaneCanvas"></canvas>
-            </div>
-        </section>
-
-        <!-- TAB 6: Historical 20-Quarter Heatmap Matrix -->
-        <section class="tab-pane" id="historicalMatrix">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
-                <div>
-                    <h3 style="font-family: var(--font-heading); font-size: 1.2rem; color: var(--text-primary);">
-                        📜 Tarihsel 20 Çeyreklik Performans Isı Haritası & Trend Takibi (2021/Q2 - 2026/Q1)
-                    </h3>
-                    <p style="color: var(--text-secondary); font-size: 0.88rem;">
-                        14 BIST şirketinizin son 5 yıldaki 20 çeyreklik verimlilik ivmesini yeşil/sarı/kırmızı ısı tonlarıyla takip edin. 
-                    </p>
-                    <div style="margin-top: 8px; font-weight: 700; font-size: 0.92rem; color: var(--accent-primary);" id="activeMatrixIndicator">
-                        🎯 Şu An Açık Olan Isı Haritası: <span style="background: rgba(79, 70, 229, 0.15); color: var(--accent-primary); padding: 4px 12px; border-radius: 14px; border: 1px solid rgba(79, 70, 229, 0.3);" id="activeMatrixName">ROIC (Sermaye Verimliliği) Matrisi</span>
-                    </div>
-                </div>
-
-                <div class="filter-group" style="gap: 8px;">
-                    <button class="matrix-btn active" id="btnMatrixRoic" onclick="setMatrixMetric('roic')">⚡ ROIC Matrisi</button>
-                    <button class="matrix-btn" id="btnMatrixRoe" onclick="setMatrixMetric('roe')">📈 ROE Matrisi</button>
-                    <button class="matrix-btn" id="btnMatrixWacc" onclick="setMatrixMetric('wacc')">🔵 WACC Matrisi</button>
-                    <button class="matrix-btn" id="btnMatrixEva" onclick="setMatrixMetric('eva')">✨ EVA Katma Değer Matrisi</button>
-                </div>
-            </div>
-
-            <div class="table-wrapper">
-                <table class="custom-table" style="white-space: nowrap;">
-                    <thead id="historicalMatrixHeader">
-                        <!-- Dynamic 20 Quarters Header Rendered by app.js -->
-                    </thead>
-                    <tbody id="historicalMatrixBody">
-                        <!-- Rendered dynamically by app.js -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- TAB 7: Multi-Stock Comparison Chart Pane -->
-        <section class="tab-pane" id="compareChartPane">
-            <div style="margin-bottom: 20px;">
-                <h3 style="font-family: var(--font-heading); font-size: 1.2rem; color: var(--text-primary);">
-                    Çoklu Şirket ROIC / ROE / WACC Trend Karşılaştırma Grafiği
-                </h3>
-                <p style="color: var(--text-secondary); font-size: 0.88rem;">
-                    Portföydeki şirketlerin 8 çeyreklik sermaye verimlilik ve maliyet çizgilerini üst üste koyarak karşılaştırın.
-                </p>
-            </div>
-
-            <div class="chart-container-box" style="height: 480px;">
-                <canvas id="compareChartCanvas"></canvas>
-            </div>
-        </section>
-
-        <!-- TAB 8: KAP Feed & Archive -->
-        <section class="tab-pane" id="kapFeed">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 16px;">
-                <div>
-                    <h3 style="font-family: var(--font-heading); color: var(--text-primary); font-size: 1.25rem; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-                        🔔 KAP İkazları & Birikimli Tarihsel Haber Arşivi
-                    </h3>
-                    <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                        Tüm KAP açıklamaları silinmeden biriktirilir. Hisse seçimi, sinyal filtresi veya kelime araması ile geçmiş haberleri filtreleyin.
-                    </p>
-                </div>
-                <div>
-                    <span class="badge-highlight badge-cyan" id="kapCountBadge" style="font-size: 0.88rem; padding: 6px 14px;">
-                        📂 Toplam 0 Arşivlenmiş KAP İkazı
-                    </span>
-                </div>
-            </div>
-
-            <!-- KAP Filtering Controls Toolbar -->
-            <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 16px 20px; border-radius: var(--radius-lg); margin-bottom: 24px; display: flex; gap: 14px; flex-wrap: wrap; align-items: center; box-shadow: var(--shadow-glow);">
-                <div>
-                    <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Hisseye Göre Filtrele:</label>
-                    <select class="select-custom" id="kapStockFilter" onchange="renderKapFeed()">
-                        <option value="ALL">Tüm Hisseler (14 Şirket)</option>
-                        <option value="EGEEN">EGEEN - Ege Endüstri</option>
-                        <option value="CLEBI">CLEBI - Çelebi Hava</option>
-                        <option value="FROTO">FROTO - Ford Otomotiv</option>
-                        <option value="BRSAN">BRSAN - Borusan Boru</option>
-                        <option value="CCOLA">CCOLA - Coca-Cola İçecek</option>
-                        <option value="OTKAR">OTKAR - Otokar</option>
-                        <option value="ISMEN">ISMEN - İş Yatırım</option>
-                        <option value="PGSUS">PGSUS - Pegasus</option>
-                        <option value="ANSGR">ANSGR - Anadolu Sigorta</option>
-                        <option value="LOGO">LOGO - Logo Yazılım</option>
-                        <option value="LKMNH">LKMNH - Lokman Hekim</option>
-                        <option value="ALKA">ALKA - Alkim Kağıt</option>
-                        <option value="SODSN">SODSN - Sodaş Sodyum</option>
-                        <option value="ALTNY">ALTNY - Altınay Savunma</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Sinyal Türü:</label>
-                    <select class="select-custom" id="kapSentimentFilter" onchange="renderKapFeed()">
-                        <option value="ALL">Tüm Sinyaller & Kategoriler</option>
-                        <option value="positive">🟢 Sadece Pozitif Sinyaller</option>
-                        <option value="warning">⚠️ Sadece Risk & Uyarılar</option>
-                    </select>
-                </div>
-
-                <div style="flex: 1; min-width: 220px;">
-                    <label style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Haber İçi Arama:</label>
-                    <input type="text" class="portfolio-input" id="kapSearchInput" placeholder="Örn: ihale, sözleşme, Daimler, zırhlı, GES..." style="width: 100%; text-align: left; padding: 8px 14px;" oninput="renderKapFeed()">
-                </div>
-
-                <div style="display: flex; align-items: flex-end;">
-                    <button class="btn-primary" id="btnManualKapSync" onclick="manualRefreshKapFeed()" style="padding: 9px 18px; border-radius: var(--radius-md); box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4); white-space: nowrap;">
-                        <i data-lucide="refresh-cw" id="kapSyncSpinner"></i> Manuel KAP Yenile
-                    </button>
-                </div>
-            </div>
-
-            <div class="kap-feed-grid" id="kapFeedGrid">
-                <!-- Rendered dynamically -->
-            </div>
-        </section>
-
-        <!-- TAB 9: Magic Formula -->
-        <section class="tab-pane" id="magicFormula">
-            <div style="margin-bottom: 20px;">
-                <h3 style="font-family: var(--font-heading); color: var(--text-primary); font-size: 1.2rem; margin-bottom: 6px;">
-                    Sihirli Formül (Magic Formula) & Değerleme Kuralı Sıralaması
-                </h3>
-                <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                    Joel Greenblatt yaklaşımıyla en yüksek ROIC ve en düşük F/K oranına sahip şirketlerin detaylı kural açıklamalarıyla analizi.
-                </p>
-            </div>
-
-            <div class="table-wrapper">
-                <table class="custom-table">
-                    <thead>
-                        <tr>
-                            <th>Derece</th>
-                            <th>Hisse</th>
-                            <th>ROIC (%)</th>
-                            <th>WACC (%)</th>
-                            <th>Kâr Verimi (1/FK)</th>
-                            <th>Bileşik Skor</th>
-                            <th>Uygulanan Değerleme Kuralı & Açıklama</th>
-                        </tr>
-                    </thead>
-                    <tbody id="magicFormulaBody">
-                        <!-- Rendered dynamically -->
-                    </tbody>
-                </table>
-            </div>
-        </section>
-
-    </div>
-
-    <!-- Company Detail Deep Dive Modal -->
-    <div class="modal-overlay" id="companyModal">
-        <div class="modal-content">
-            <button class="modal-close" onclick="closeModal()">
-                <i data-lucide="x"></i>
-            </button>
-            <div class="modal-header-info">
-                <div class="brand-logo" style="width: 48px; height: 48px;">
-                    <i data-lucide="bar-chart-3"></i>
-                </div>
-                <div>
-                    <h2 id="modalTitle" style="font-family: var(--font-heading); font-size: 1.4rem;">-</h2>
-                    <span style="font-size: 0.85rem; color: var(--accent-secondary);">Finansal Performans & ROIC / ROE / WACC Analizi</span>
-                </div>
-            </div>
-            <div id="modalBody">
-                <!-- Rendered dynamically -->
-            </div>
+        <div class="kap-toolbar">
+          <span class="scan-progress-text" id="scan-progress-text"></span>
         </div>
-    </div>
+      </div>
 
-    <!-- Valuation Rules Help Modal -->
-    <div class="modal-overlay" id="valuationRulesHelpModal">
-        <div class="modal-content" style="max-width: 700px;">
-            <button class="modal-close" onclick="closeValuationRulesHelpModal()">
-                <i data-lucide="x"></i>
-            </button>
-            <div class="modal-header-info" style="margin-bottom: 16px;">
-                <div class="brand-logo" style="width: 44px; height: 44px; background: rgba(16, 185, 129, 0.15); color: #10b981;">
-                    <i data-lucide="help-circle"></i>
-                </div>
-                <div>
-                    <h3 style="font-family: var(--font-heading); font-size: 1.25rem;">Değerleme Kuralları & Renk Rehberi</h3>
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Tabloda hangi finansal kuralların uygulandığını inceleyin</span>
-                </div>
-            </div>
-            
-            <div style="font-size: 0.88rem; line-height: 1.6; color: var(--text-primary);">
-                <div style="margin-bottom: 20px; background: var(--bg-main); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                    <h4 style="color: var(--accent-primary); font-family: var(--font-heading); margin-bottom: 12px; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
-                        📊 ROIC - WACC Katma Değer Derecelendirme Skalası
-                    </h4>
-                    <div class="table-wrapper" style="margin: 0;">
-                        <table class="custom-table" style="font-size: 0.85rem;">
-                            <thead>
-                                <tr style="background: rgba(0, 0, 0, 0.04);">
-                                    <th style="padding: 8px 12px;">ROIC - WACC</th>
-                                    <th style="padding: 8px 12px;">Anlamı & Şirket Derecelendirmesi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>&lt; 0</strong></td>
-                                    <td>🔴 <strong>Değer yok ediyor.</strong></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>0-5 puan</strong></td>
-                                    <td>🟡 <strong>Sermaye maliyetini az farkla geçiyor.</strong></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>5-10 puan</strong></td>
-                                    <td>🟢 <strong>İyi şirket.</strong></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>10-15 puan</strong></td>
-                                    <td>🟢 <strong>Çok kaliteli şirket.</strong></td>
-                                </tr>
-                                <tr>
-                                    <td><strong>15 puan üzeri</strong></td>
-                                    <td>⭐ <strong>Elit şirketler. Uzun vadede bileşik getiri oluşturma potansiyeli yüksektir.</strong></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div style="margin-bottom: 16px; background: var(--bg-main); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                    <h4 style="color: #10b981; font-family: var(--font-heading); margin-bottom: 6px;">1. Ekonomik Katma Değer (EVA Rule): ROIC vs WACC</h4>
-                    <p style="margin: 0; color: var(--text-secondary);">
-                        - 🟢 <strong>ROIC > WACC (Spread > 0)</strong>: Şirket sermaye maliyetinin üzerinde getiri üreterek hissedara <strong>Ekonomik Katma Değer (EVA)</strong> yaratıyor.<br>
-                        - 🔴 <strong>ROIC < WACC (Spread < 0)</strong>: Şirket sermaye maliyetini karşılayamıyor, sermaye eritme riski taşıyor.
-                    </p>
-                </div>
-
-                <div style="margin-bottom: 16px; background: var(--bg-main); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                    <h4 style="color: #0284c7; font-family: var(--font-heading); margin-bottom: 6px;">2. Joel Greenblatt Sihirli Formül (Magic Formula Rule)</h4>
-                    <p style="margin: 0; color: var(--text-secondary);">
-                        Formül: <code>Bileşik Skor = (ROIC × %60) + (Kâr Verimi (1/FK) × %40)</code><br>
-                        - 🟢 <strong>Derece 1-3</strong>: "Sihirli Formül Şampiyonu" (Yüksek sermaye verimi + Uygun değerleme F/K).<br>
-                        - 🟡 <strong>Derece 4-8</strong>: "Sağlıklı & Dengeli Verimlilik".<br>
-                        - 🔴 <strong>Derece 9+</strong>: "Düşük Verim veya Yüksek F/K".
-                    </p>
-                </div>
-
-                <div style="margin-bottom: 16px; background: var(--bg-main); padding: 14px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                    <h4 style="color: #f59e0b; font-family: var(--font-heading); margin-bottom: 6px;">3. Trafik Işığı Renk Eşikleri</h4>
-                    <p style="margin: 0; color: var(--text-secondary);">
-                        - <strong>ROIC</strong>: 🟢 ≥%30 | 🟡 %20-%30 | 🔴 &lt;%20<br>
-                        - <strong>ROE</strong>: 🟢 ≥%40 | 🟡 %25-%40 | 🔴 &lt;%25<br>
-                        - <strong>F/K</strong>: 🟢 ≤8x | 🟡 8x-14x | 🔴 &gt;14x<br>
-                        - <strong>PD/DD</strong>: 🟢 ≤2.5x | 🟡 2.5x-4.5x | 🔴 &gt;4.5x<br>
-                        - <strong>Net Borç/FAVÖK</strong>: 🟢 ≤0x (Borçsuz) | 🟡 0x-1.5x (Makul) | 🔴 &gt;1.5x (Borç Riski)
-                    </p>
-                </div>
-            </div>
+      <!-- Stats row -->
+      <div class="stat-row" id="kap-stats">
+        <div class="stat-badge">
+          <div class="stat-badge-label">Toplam Bildirim</div>
+          <div class="stat-badge-val" id="stat-total">—</div>
         </div>
-    </div>
-
-    <!-- Toast Notification Container -->
-    <div class="toast-container" id="toastContainer"></div>
-
-    <!-- BIST & KAP Live Sync Diagnostic Audit Modal -->
-    <div class="modal-overlay" id="syncAuditModal">
-        <div class="modal-content" style="max-width: 620px;">
-            <button class="modal-close" onclick="closeSyncAuditModal()">✕</button>
-            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-                <div style="width: 42px; height: 42px; border-radius: 10px; background: rgba(79, 70, 229, 0.15); color: var(--accent-primary); display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-                    <i data-lucide="shield-check"></i>
-                </div>
-                <div>
-                    <h3 style="font-family: var(--font-heading); font-size: 1.2rem; color: var(--text-primary);">
-                        🔍 BIST Canlı Bağlantı & KAP Tarama Raporu
-                    </h3>
-                    <div style="font-size: 0.8rem; color: var(--text-muted);" id="auditTimestampText">Son Kontrol: --</div>
-                </div>
-            </div>
-
-            <div style="background: var(--bg-main); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px; font-size: 0.88rem;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <span>🟢 BIST Canlı API Bağlantısı:</span>
-                    <strong style="color: var(--accent-success);" id="auditApiStatus">200 OK (Yahoo Finance BIST)</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <span>📊 Taranan BIST Hisseleri:</span>
-                    <strong>14 / 14 Şirket Doğrulandı</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                    <span>⏰ Borsa Seans Durumu:</span>
-                    <strong id="auditMarketStatus" style="color: var(--accent-warning);">Gece Seans Dışı (Fiyatlar Sabit)</strong>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>📂 Doğrulanmış KAP Bildirimi:</span>
-                    <strong>31 Adet Aktif Haber Korundu</strong>
-                </div>
-            </div>
-
-            <div style="background: rgba(2, 132, 199, 0.08); border-left: 3px solid var(--accent-secondary); padding: 12px 14px; border-radius: 4px; font-size: 0.84rem; line-height: 1.4; margin-bottom: 20px;">
-                <strong>💡 Bilgilendirme:</strong> Borsa İstanbul seans saatleri dışında (gece / hafta sonu) hisse fiyatları ve resmi KAP açıklamaları sabit kalır. Sistem sizi aldatmamak adına sahte haber üretmez. Gerçek seans başladığında (10:00 - 18:00) canlı haber ve fiyatlar anında güncellenir.
-            </div>
-
-            <button class="btn-primary" onclick="closeSyncAuditModal()" style="width: 100%; justify-content: center; padding: 10px;">
-                Anladım, Kapat
-            </button>
+        <div class="stat-badge">
+          <div class="stat-badge-label">🟢 Pozitif</div>
+          <div class="stat-badge-val" id="stat-pos" style="color:var(--pos)">—</div>
         </div>
+        <div class="stat-badge">
+          <div class="stat-badge-label">🔴 Negatif</div>
+          <div class="stat-badge-val" id="stat-neg" style="color:var(--neg)">—</div>
+        </div>
+        <div class="stat-badge">
+          <div class="stat-badge-label">Yüksek Etki (≥7)</div>
+          <div class="stat-badge-val" id="stat-high" style="color:var(--neu)">—</div>
+        </div>
+      </div>
+
+      <!-- Filter bar -->
+      <div id="filter-container"></div>
+
+      <!-- Cards -->
+      <div id="kap-cards">
+        <div class="empty-state">
+          <div class="empty-icon">🔄</div>
+          <p>Yükleniyor…</p>
+        </div>
+      </div>
     </div>
 
-    <!-- Flexible Script Loading: Supports both root and subfolder structures! -->
-    <script src="data.js" onerror="this.onerror=null;this.src='js/data.js';"></script>
-    <script src="app.js" onerror="this.onerror=null;this.src='js/app.js';"></script>
+    <!-- ════════════════════════════════════════
+         TAB: FİNANSAL ISI HARİTASI
+    ════════════════════════════════════════ -->
+    <div id="panel-heatmap" class="tab-panel">
+
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Finansal Isı Haritası</h2>
+          <div class="panel-subtitle">
+            Son 20 çeyrek ROE / ROIC / WACC / EVA — KAP finansal tablolarından hesaplanmıştır
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <button class="btn-secondary" id="btn-fetch-financials">📊 Finansal Verileri Güncelle</button>
+        </div>
+      </div>
+
+      <!-- Formül bilgisi -->
+      <div class="section-card" style="margin-bottom:16px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">ROE</div>
+            <div style="font-family:var(--mono);font-size:12px;color:var(--text-b);">Net Kâr (TTM yıll.) / Ort. Özkaynak</div>
+            <div style="font-size:11px;color:var(--text-s);margin-top:4px;">Özkaynak getirisi — yatırımcı bakışı</div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">ROIC</div>
+            <div style="font-family:var(--mono);font-size:12px;color:var(--text-b);">NOPAT (yıll.) / (Özkaynak + Net Borç)</div>
+            <div style="font-size:11px;color:var(--text-s);margin-top:4px;">NOPAT = EBIT × (1 − Efektif Vergi Oranı)</div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">WACC</div>
+            <div style="font-family:var(--mono);font-size:12px;color:var(--text-b);">E/V×Ke + D/V×Kd×(1−T)</div>
+            <div style="font-size:11px;color:var(--text-s);margin-top:4px;">Ke = Rf + β×MRP | Rf = TR 10Y tahvil</div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">EVA</div>
+            <div style="font-family:var(--mono);font-size:12px;color:var(--text-b);">NOPAT − WACC × Yatırılan Sermaye</div>
+            <div style="font-size:11px;color:var(--text-s);margin-top:4px;">Pozitif EVA = değer yaratma</div>
+          </div>
+        </div>
+
+        <!-- WACC bileşenleri -->
+        <div class="divider"></div>
+        <div style="display:flex;gap:24px;flex-wrap:wrap;font-size:12px;color:var(--text-m);">
+          <span>📌 <b style="color:var(--text-b)">Rf</b> (Risksiz Faiz): <span id="rf-display" style="font-family:var(--mono);">~30% (TR 10Y)</span></span>
+          <span>📌 <b style="color:var(--text-b)">MRP</b> (Piyasa Risk Primi): <span style="font-family:var(--mono);">5.5%</span></span>
+          <span>📌 <b style="color:var(--text-b)">T</b> (Kurumlar Vergisi): <span style="font-family:var(--mono);">22%</span></span>
+          <span>📌 Beta: Sektöre göre (0.75–1.30)</span>
+        </div>
+      </div>
+
+      <!-- Metric selector -->
+      <div class="metric-selector" style="margin-bottom:16px;">
+        <button class="metric-btn active" data-metric="ROE">ROE</button>
+        <button class="metric-btn" data-metric="ROIC">ROIC</button>
+        <button class="metric-btn" data-metric="WACC">WACC</button>
+        <button class="metric-btn" data-metric="EVA">EVA</button>
+      </div>
+
+      <!-- Heatmap -->
+      <div class="section-card" style="padding:16px;">
+        <div id="heatmap-container">
+          <div class="empty-state">
+            <div class="empty-icon">📊</div>
+            <p>Finansal veriler yükleniyor…</p>
+            <p style="margin-top:8px;">
+              <button class="btn-primary" id="btn-fetch-financials-2">📥 Verileri Şimdi Çek</button>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════
+         TAB: AYARLAR
+    ════════════════════════════════════════ -->
+    <div id="panel-settings" class="tab-panel">
+
+      <div class="panel-header">
+        <div>
+          <h2 class="panel-title">Ayarlar</h2>
+          <div class="panel-subtitle">API anahtarı, Rf oranı ve diğer yapılandırmalar</div>
+        </div>
+      </div>
+
+      <!-- Gemini API Key (hidden - pre-configured) -->
+      <div class="settings-section" style="display:none;" id="gemini-key-section">
+        <h3>🤖 Google Gemini API</h3>
+        <p style="font-size:13px;color:var(--text-m);margin-bottom:16px;">
+          KAP bildirimlerini analiz etmek için Gemini API kullanılır.
+          <a href="https://aistudio.google.com/apikey" target="_blank">Google AI Studio</a>'dan ücretsiz key alabilirsiniz.
+        </p>
+        <div class="form-group">
+          <label>API Key</label>
+          <input type="password" id="gemini-key-input" placeholder="AIza…" autocomplete="off">
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" id="btn-save-key">💾 Kaydet</button>
+          <button class="btn-secondary" id="btn-test-key">🧪 Test Et</button>
+        </div>
+      </div>
+
+      <!-- Rf Rate -->
+      <div class="settings-section">
+        <h3>📈 WACC Parametreleri</h3>
+        <div class="form-group">
+          <label>Risksiz Faiz Oranı — Rf (Türkiye 10Y Devlet Tahvili %)</label>
+          <input type="text" id="rf-rate-input" placeholder="örn: 30" style="font-family:var(--mono);">
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" id="btn-save-rf">💾 Kaydet</button>
+        </div>
+        <p style="font-size:12px;color:var(--text-s);margin-top:12px;">
+          💡 Güncel TCMB politika faizi ve 10 yıllık devlet tahvili faizini
+          <a href="https://www.tcmb.gov.tr" target="_blank">TCMB</a> veya
+          <a href="https://www.investing.com/rates-bonds/turkey-10-year-bond-yield" target="_blank">Investing.com</a>'dan takip edebilirsiniz.
+        </p>
+      </div>
+
+      <!-- Data management -->
+      <div class="settings-section">
+        <h3>🗃️ Veri Yönetimi</h3>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn-secondary" id="btn-clear-kap-data">🗑️ KAP Verilerini Temizle</button>
+          <button class="btn-secondary" id="btn-clear-financial-data">🗑️ Finansal Verileri Temizle</button>
+          <button class="btn-danger" id="btn-reset-all">⚠️ Tümünü Sıfırla</button>
+        </div>
+        <p style="font-size:12px;color:var(--text-s);margin-top:12px;">
+          Temizleme sonrası yeniden tarama gerekebilir.
+        </p>
+      </div>
+
+      <!-- About -->
+      <div class="settings-section">
+        <h3>ℹ️ Hakkında</h3>
+        <div style="font-size:13px;color:var(--text-m);line-height:1.8;">
+          <p><b style="color:var(--text-b)">Kaynak:</b> KAP (Kamuyu Aydınlatma Platformu) — <a href="https://www.kap.org.tr" target="_blank">kap.org.tr</a></p>
+          <p><b style="color:var(--text-b)">AI Modeli:</b> Google Gemini 2.0 Flash</p>
+          <p><b style="color:var(--text-b)">Tarama Saatleri:</b> 09:30 ve 16:00 (tarayıcı açıkken)</p>
+          <p><b style="color:var(--text-b)">Depolama:</b> Tüm veriler yerel tarayıcıda (IndexedDB + localStorage)</p>
+          <p style="margin-top:10px;padding:10px;background:var(--neg-dim);border-radius:8px;border:1px solid rgba(255,82,82,0.2);">
+            ⚠️ Bu araç yatırım tavsiyesi vermez. Tüm analizler bilgilendirme amaçlıdır.
+          </p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     STOCK MANAGER MODAL
+═══════════════════════════════════════════════════════ -->
+<div id="stock-modal" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>⚙️ Hisse Listesi Yönetimi</h3>
+      <button class="btn-icon" id="btn-close-stock-modal">✕</button>
+    </div>
+
+    <p style="font-size:13px;color:var(--text-m);margin-bottom:14px;">
+      İzlemek istediğiniz hisseleri seçin veya yeni ekleyin.
+    </p>
+
+    <div id="stock-check-list">
+      <!-- Dynamically rendered -->
+    </div>
+
+    <div class="add-stock-row">
+      <input type="text" id="add-ticker-input" placeholder="Yeni hisse ekle (örn: THYAO)" maxlength="8">
+      <button class="btn-secondary" onclick="document.getElementById('add-ticker-input').value.trim() && document.getElementById('btn-save-stocks').click()">
+        + Ekle & Kaydet
+      </button>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" id="btn-close-stock-modal-2" onclick="document.getElementById('stock-modal').classList.remove('open')">İptal</button>
+      <button class="btn-primary" id="btn-save-stocks">✅ Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PROGRESS BAR
+═══════════════════════════════════════════════════════ -->
+<div id="progress-bar-wrap">
+  <span id="progress-bar-text">Yükleniyor…</span>
+  <div class="progress-bar">
+    <div id="progress-bar-inner"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     TOAST
+═══════════════════════════════════════════════════════ -->
+<div id="toast" class="toast toast-info"></div>
+
+<!-- ═══════════════════════════════════════════════════════
+     SCRIPTS (order matters: deps first)
+═══════════════════════════════════════════════════════ -->
+<script src="js/config.js"></script>
+<script src="js/store.js"></script>
+<script src="js/cors-proxy.js"></script>
+<script src="js/kap-api.js"></script>
+<script src="js/gemini.js"></script>
+<script src="js/financial-calc.js"></script>
+<script src="js/heatmap.js"></script>
+<script src="js/kap-panel.js"></script>
+<script src="js/scheduler.js"></script>
+<script src="js/app.js"></script>
+
+<!-- Extra wiring for settings panel -->
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+  // ── Rf Rate ─────────────────────────────────────
+  const rfInput = document.getElementById('rf-rate-input');
+  if (rfInput) {
+    const saved = Store.lsGet('rf_rate', 30);
+    rfInput.value = saved;
+    const rfDisplay = document.getElementById('rf-display');
+    if (rfDisplay) rfDisplay.textContent = '~' + saved + '% (TR 10Y)';
+  }
+
+  document.getElementById('btn-save-rf')?.addEventListener('click', () => {
+    const v = parseFloat(document.getElementById('rf-rate-input').value);
+    if (!isNaN(v) && v > 0 && v < 100) {
+      Store.lsSet('rf_rate', v);
+      const rfDisplay = document.getElementById('rf-display');
+      if (rfDisplay) rfDisplay.textContent = '~' + v + '% (TR 10Y)';
+      App.showToast('Rf oranı güncellendi.', 'success');
+    }
+  });
+
+  // ── Data management ──────────────────────────────
+  document.getElementById('btn-clear-kap-data')?.addEventListener('click', () => App.clearKapData());
+  document.getElementById('btn-clear-financial-data')?.addEventListener('click', () => App.clearFinancialData());
+  document.getElementById('btn-reset-all')?.addEventListener('click', () => App.resetAll());
+
+  // ── Second fetch button (in heatmap empty state) ──
+  document.getElementById('btn-fetch-financials-2')?.addEventListener('click', () => App.fetchAllFinancials());
+
+  // ── Stats update loop ──────────────────────────────
+  setInterval(() => App.updateStats(), 5000);
+});
+</script>
+
 </body>
 </html>
